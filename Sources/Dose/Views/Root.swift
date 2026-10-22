@@ -12,7 +12,11 @@ enum Screen: Equatable {
 }
 
 final class Nav: ObservableObject {
-    @Published var screen: Screen = .today
+    @Published var screen: Screen = .today {
+        didSet { if [.today, .history, .items].contains(oldValue) { origin = oldValue } }
+    }
+    /// Tela de lista de onde se abriu um formulário: é pra lá que o voltar/salvar leva.
+    private(set) var origin: Screen = .today
 }
 
 struct RootView: View {

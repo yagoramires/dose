@@ -35,18 +35,26 @@ enum Snapshots {
         store.upsert(soda)
         for day in [25, 16, 14, 3] { store.take(soda, at: ago(day, 15)) }
 
+        var omega = Item(name: "Ômega 3", dose: "2 cápsulas", schedule: .interval(days: 3), reminder: Clock(hour: 20, minute: 0),
+                         tint: .yellow)
+        omega.created = ago(40, 0)
+        store.upsert(omega)
+        store.take(omega, at: ago(3, 20, 5))
+        var gym = Item(name: "Alongamento", dose: "1 dose", schedule: .weekdays([2, 4, 6]), reminder: Clock(hour: 18, minute: 0),
+                       tint: .green)
+        gym.created = ago(40, 0)
+        store.upsert(gym)
+
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let nav = Nav()
-        let screens: [(String, Screen, CounterStyle)] = [
-            ("1-hoje", .today, .plate), ("1b-hoje-recorde", .today, .record), ("1c-hoje-pontos", .today, .dots),
-            ("8-novo-contador", .newCounter, .plate), ("2-semanal", .log(semanal.id), .plate), ("3-historico", .history, .plate),
-            ("4-itens", .items, .plate), ("5-editar", .edit(semanal), .plate), ("6-contador", .edit(nil), .plate), ("7-zerar", .log(doce.id), .plate),
+        let screens: [(String, Screen)] = [
+            ("1-hoje", .today), ("8-novo-contador", .newCounter), ("2-semanal", .log(semanal.id)), ("3-historico", .history),
+            ("4-itens", .items), ("5-editar", .edit(semanal)), ("6-novo-item", .edit(nil)), ("9-editar-dias", .edit(gym)), ("10-editar-intervalo", .edit(omega)), ("7-zerar", .log(doce.id)),
         ]
         for appearance in [NSAppearance.Name.aqua, .darkAqua] {
-            for (name, screen, style) in screens {
+            for (name, screen) in screens {
                 nav.screen = screen
                 let view = NSHostingView(rootView: RootView().environmentObject(store).environmentObject(nav).environmentObject(Reminders(store: store))
-                    .environment(\.counterStyle, style)
                     .background(Color(nsColor: .windowBackgroundColor)))
                 view.appearance = NSAppearance(named: appearance)
                 let window = NSWindow(contentRect: NSRect(origin: .zero, size: view.fittingSize),

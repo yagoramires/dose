@@ -92,17 +92,28 @@ final class Store: ObservableObject {
             if let last, last.date >= today { return .done(last) }
             return .pending(since: today)
 
-        case .weekly(let weekday):
-            let back = (calendar.component(.weekday, from: today) - weekday + 7) % 7
+        case .weekdays(let days):
+            guard !days.isEmpty else { return .later(next: .distantFuture, last: last) }
+            let todayWeekday = calendar.component(.weekday, from: today)
+            // Último dia marcado até hoje (o ciclo atual) e o próximo depois de hoje.
+            let back = days.map { (todayWeekday - $0 + 7) % 7 }.min()!
+            let ahead = days.map { ($0 - todayWeekday + 6) % 7 + 1 }.min()!
             let cycle = calendar.date(byAdding: .day, value: -back, to: today)!
-            let next = calendar.date(byAdding: .day, value: 7, to: cycle)!
-            // Tomar um dia antes também vale pro ciclo (ex.: viagem no dia da aplicação).
-            let early = calendar.date(byAdding: .day, value: -1, to: cycle)!
+            let next = calendar.date(byAdding: .day, value: ahead, to: today)!
+            // Uma vez por semana: tomar um dia antes também vale (ex.: viagem no dia da aplicação).
+            let early = days.count == 1 ? calendar.date(byAdding: .day, value: -1, to: cycle)! : cycle
             if let last, last.date >= early {
                 return last.date >= today ? .done(last) : .later(next: next, last: last)
             }
             if cycle < calendar.startOfDay(for: item.created) { return .later(next: next, last: last) }
             return .pending(since: cycle)
+
+        case .interval(let every):
+            if let last, last.date >= today { return .done(last) }
+            // Sem dose ainda: vale desde que o item foi criado.
+            guard let last else { return .pending(since: max(calendar.startOfDay(for: item.created), today)) }
+            let due = calendar.date(byAdding: .day, value: max(1, every), to: calendar.startOfDay(for: last.date))!
+            return due <= today ? .pending(since: due) : .later(next: due, last: last)
 
         case .asNeeded:
             return .asNeeded(today: intakes(of: item).filter { $0.date >= today })

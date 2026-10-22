@@ -15,6 +15,7 @@ struct TodayView: View {
 
         VStack(alignment: .leading, spacing: 0) {
             Header(title: Format.long(store.now).capitalizedFirst, subtitle: progress(missing: missing, of: today)) {
+                IconButton(symbol: "plus", help: "Novo item") { nav.screen = .edit(nil) }
                 IconButton(symbol: "clock.arrow.circlepath", help: "Histórico") { nav.screen = .history }
                 IconButton(symbol: "gearshape", help: "Itens e ajustes") { nav.screen = .items }
             }
@@ -85,18 +86,24 @@ struct ItemRow: View {
         let status = store.status(of: item)
         HStack(spacing: 12) {
             check(status)
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    Text(item.name).fontWeight(.medium)
-                    if !item.dose.isEmpty {
-                        Text(item.dose).font(.callout).foregroundStyle(.secondary)
+            // O nome abre a edição (frequência, dose, lembrete); quem marca é a cápsula.
+            Button { nav.screen = .edit(item) } label: {
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(alignment: .firstTextBaseline, spacing: 5) {
+                        Text(item.name).fontWeight(.medium)
+                        if !item.dose.isEmpty {
+                            Text(item.dose).font(.callout).foregroundStyle(.secondary)
+                        }
+                    }
+                    if let detail = detail(status) {
+                        Text(detail).font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                if let detail = detail(status) {
-                    Text(detail).font(.caption).foregroundStyle(.secondary)
-                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            Spacer(minLength: 4)
+            .buttonStyle(.plain)
+            .help("Editar \(item.name)")
             trailing(status)
             ItemMenu(item: item, hovering: hovering)
         }

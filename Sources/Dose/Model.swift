@@ -1,9 +1,11 @@
 import Foundation
 
-enum Schedule: Codable, Hashable {
+enum Schedule: Hashable {
     case daily
-    /// Dia fixo da semana, no padrão do Calendar: 1 = domingo … 7 = sábado.
-    case weekly(weekday: Int)
+    /// Dias fixos da semana, no padrão do Calendar: 1 = domingo … 7 = sábado. [7] = todo sábado.
+    case weekdays([Int])
+    /// A cada N dias, contando da última dose.
+    case interval(days: Int)
     /// Sem horário nem cobrança: só registra quando tomou (chá, café…).
     case asNeeded
     /// "12 dias sem comer doce": conta os dias desde a última vez que aconteceu.
@@ -12,8 +14,51 @@ enum Schedule: Codable, Hashable {
     /// Entra na lista do dia (tem dia certo pra tomar).
     var isScheduled: Bool {
         switch self {
-        case .daily, .weekly: true
+        case .daily, .weekdays, .interval: true
         case .asNeeded, .counter: false
+        }
+    }
+}
+
+extension Schedule: Codable {
+    private enum Kind: String, CodingKey { case daily, weekly, weekdays, interval, asNeeded, counter }
+    private enum Field: String, CodingKey { case weekday, days }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Kind.self)
+        if container.contains(.daily) {
+            self = .daily
+        } else if container.contains(.weekly) {
+            // Formato da v0.1: um dia só.
+            let fields = try container.nestedContainer(keyedBy: Field.self, forKey: .weekly)
+            self = .weekdays([try fields.decode(Int.self, forKey: .weekday)])
+        } else if container.contains(.weekdays) {
+            let fields = try container.nestedContainer(keyedBy: Field.self, forKey: .weekdays)
+            self = .weekdays(try fields.decode([Int].self, forKey: .days))
+        } else if container.contains(.interval) {
+            let fields = try container.nestedContainer(keyedBy: Field.self, forKey: .interval)
+            self = .interval(days: try fields.decode(Int.self, forKey: .days))
+        } else if container.contains(.asNeeded) {
+            self = .asNeeded
+        } else if container.contains(.counter) {
+            self = .counter
+        } else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "frequência desconhecida"))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: Kind.self)
+        switch self {
+        case .daily: _ = container.nestedContainer(keyedBy: Field.self, forKey: .daily)
+        case .weekdays(let days):
+            var fields = container.nestedContainer(keyedBy: Field.self, forKey: .weekdays)
+            try fields.encode(days.sorted(), forKey: .days)
+        case .interval(let days):
+            var fields = container.nestedContainer(keyedBy: Field.self, forKey: .interval)
+            try fields.encode(days, forKey: .days)
+        case .asNeeded: _ = container.nestedContainer(keyedBy: Field.self, forKey: .asNeeded)
+        case .counter: _ = container.nestedContainer(keyedBy: Field.self, forKey: .counter)
         }
     }
 }
@@ -110,7 +155,7 @@ extension Item {
             Item(name: "Vitamina C", dose: "5 g", schedule: .daily, reminder: Clock(hour: 9, minute: 0), tint: .teal),
             Item(name: "Vitamina D", dose: "1 cápsula", schedule: .daily, reminder: Clock(hour: 9, minute: 0),
                  tint: .orange),
-            Item(name: "Medicação semanal", dose: "", schedule: .weekly(weekday: 7), reminder: Clock(hour: 9, minute: 0),
+            Item(name: "Medicação semanal", dose: "", schedule: .weekdays([7]), reminder: Clock(hour: 9, minute: 0),
                  tint: .purple, tracksSite: true),
             Item(name: "Chá", dose: "", schedule: .asNeeded, tint: .brown),
             Item(name: "Café", dose: "", schedule: .asNeeded, tint: .pink),
@@ -122,7 +167,8 @@ extension Item {
         let time = reminder.map { " às \($0.label)" } ?? ""
         switch schedule {
         case .daily: return "Todo dia" + time
-        case .weekly(let weekday): return Format.every(weekday) + time
+        case .weekdays(let days): return Format.weekdays(days) + time
+        case .interval(let days): return (days == 1 ? "Todo dia" : "A cada \(days) dias") + time
         case .asNeeded: return "Quando precisar"
         case .counter: return "Contador de dias"
         }

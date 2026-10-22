@@ -8,6 +8,21 @@ enum Format {
         (weekday == 1 || weekday == 7 ? "Todo " : "Toda ") + weekdays[weekday - 1]
     }
 
+    /// "Todo sábado", "Seg, qua e sex", "Todo dia" (os 7), "Fim de semana".
+    static func weekdays(_ days: [Int]) -> String {
+        let sorted = Set(days).sorted { ($0 + 5) % 7 < ($1 + 5) % 7 }  // segunda primeiro
+        switch sorted.count {
+        case 0: return "Nenhum dia"
+        case 1: return every(sorted[0])
+        case 7: return "Todo dia"
+        default:
+            if sorted == [7, 1] { return "Fim de semana" }
+            if sorted == [2, 3, 4, 5, 6] { return "Dias úteis" }
+            let names = sorted.map { String(weekdays[$0 - 1].prefix(3)) }
+            return (names.dropLast().joined(separator: ", ") + " e " + names.last!).capitalizedFirst
+        }
+    }
+
     private static let locale = Locale(identifier: "pt_BR")
 
     private static func formatter(_ template: String) -> DateFormatter {

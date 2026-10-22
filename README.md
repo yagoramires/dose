@@ -3,9 +3,11 @@
 Controle de remédios e suplementos pela barra de menus do macOS. Um clique na pílula mostra o que falta hoje, o que já foi tomado (e a que horas) e o que é "quando precisar".
 
 - **Todo dia** (vitamina C, vitamina D): marca com um clique, mostra a hora em que tomou e quantos dias seguidos.
+- **Dias da semana** (só sábado, ou seg/qua/sex…) e **a cada N dias** (ômega 3 a cada 3 dias), contando da última dose.
 - **Uma vez por semana** (Medicação semanal): dia fixo, avisa se atrasou e pede o **local da aplicação** num mapa do corpo (braço, abdômen, coxa; esquerdo e direito), sugerindo o local usado há mais tempo pro rodízio. Tomar um dia antes também conta.
 - **Quando precisar** (chá, café): só registra, com contagem do dia.
-- **Contadores** ("12 dias sem comer doce"): número grande de dias desde a última vez, com o recorde. No ⋯ do bloco: "Aconteceu agora, zerar" ou registrar em outra data.
+- **Contadores** ("12 dias sem comer doce"): dias desde a última vez e uma barra até o seu recorde. "+ Novo contador" no fim da seção, ↺ zera, ⋯ registra outra data ou desfaz.
+- Clicar no nome de um item abre a edição dele; o + no topo cria um item novo.
 - Cada item tem uma cor de cápsula, escolhida na edição; a cápsula vira o botão de marcar (meio cheia = falta, cheia com ✓ = tomado).
 - **Lembretes**: no horário marcado, só se ainda não tomou. Insiste a cada 2 h (das 7 h às 23 h) até marcar. Dá pra marcar "Tomei" ou adiar 30 min direto na notificação.
 - A pílula na barra mostra quantos itens ainda faltam hoje.

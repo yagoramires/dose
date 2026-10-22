@@ -14,6 +14,8 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
     // Preguiçoso: fora de um .app (modo --snapshots) o sistema derruba o processo ao pedir o center.
     private lazy var center = UNUserNotificationCenter.current()
     private var nextNag: [UUID: Date] = [:]
+    /// Doses já tomadas no ciclo quando olhamos da última vez: mudou, o aviso velho sai da Central.
+    private var seenTaken: [UUID: Int] = [:]
     /// Só avisa com permissão; antes disso o aviso se perderia. Começa true pra não piscar o
     /// alerta de "notificações desligadas" enquanto o sistema não responde.
     @Published private(set) var authorized = true
@@ -72,15 +74,20 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
         let now = Date()
         let hour = Calendar.current.component(.hour, from: now)
         for item in store.active {
-            guard let reminder = item.reminder, case .pending(let since) = store.status(of: item) else {
+            guard item.remind, let next = item.times.first, case .pending(let since) = store.status(of: item) else {
                 if nextNag[item.id] != nil { clear(item) }
                 continue
             }
-            let due = reminder.on(since)
+            let taken = store.taken(item, since: since)
+            if seenTaken[item.id] != taken {
+                if seenTaken[item.id] != nil { clear(item) }
+                seenTaken[item.id] = taken
+            }
+            let due = (store.nextTime(of: item, since: since) ?? next).on(since)
             guard now >= due, now >= nextNag[item.id] ?? .distantPast else { continue }
             // Na madrugada só sai o aviso do próprio horário marcado, não as insistências.
             if !Self.quiet.contains(hour), now.timeIntervalSince(due) > 60 * 60 { continue }
-            post(item, overdue: Format.days(from: since, to: now))
+            post(item, overdue: Format.days(from: since, to: now), dose: taken + 1)
             nextNag[item.id] = now.addingTimeInterval(Self.nag)
         }
     }
@@ -91,13 +98,15 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
         center.removeDeliveredNotifications(withIdentifiers: [item.id.uuidString])
     }
 
-    private func post(_ item: Item, overdue: Int) {
+    private func post(_ item: Item, overdue: Int, dose: Int) {
         let content = UNMutableNotificationContent()
         content.title = item.dose.isEmpty ? item.name : "\(item.name) · \(item.dose)"
         if overdue > 0 {
             content.body = "Atrasado \(overdue) \(overdue == 1 ? "dia" : "dias"). Já tomou?"
         } else if item.tracksSite {
             content.body = "Hora da aplicação. Sugestão: \(store.suggestedSite(for: item).label.lowercased())."
+        } else if item.dosesPerDay > 1 {
+            content.body = "Hora da \(dose)ª dose de \(item.dosesPerDay)."
         } else {
             content.body = "Hora de tomar."
         }

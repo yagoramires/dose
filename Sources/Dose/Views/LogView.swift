@@ -23,7 +23,8 @@ struct LogView: View {
 
                 if item.tracksSite {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Local da aplicação").font(.subheadline.weight(.medium))
+                        LastSite(item: item)
+                        Text("Local desta aplicação").font(.subheadline.weight(.medium))
                         BodyMap(item: item, selection: $site)
                         Text("Esquerdo e direito do seu corpo. A sugestão é o local usado há mais tempo.")
                             .font(.caption).foregroundStyle(.secondary)
@@ -50,6 +51,33 @@ struct LogView: View {
     }
 }
 
+/// Onde foi a aplicação anterior, pra não repetir o lugar.
+struct LastSite: View {
+    @EnvironmentObject private var store: Store
+    let item: Item
+
+    var body: some View {
+        if let last = store.intakes(of: item).last(where: { $0.site != nil }), let site = last.site {
+            HStack(spacing: 10) {
+                Image(systemName: "mappin.and.ellipse").font(.title3).foregroundStyle(item.tint.color)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Última aplicação").font(.caption).foregroundStyle(.secondary)
+                    Text(site.label).fontWeight(.semibold)
+                    Text("\(Format.ago(last.date, now: store.now).capitalizedFirst), \(Format.day(last.date, now: store.now)) às \(Format.time(last.date))")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(10)
+            .background(RoundedRectangle(cornerRadius: 10).fill(item.tint.color.opacity(0.12)))
+        } else {
+            Text("Nenhuma aplicação registrada ainda. Se já aplicou antes, mude a data em Quando e marque o local.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
 struct BodyMap: View {
     @EnvironmentObject private var store: Store
     let item: Item
@@ -58,6 +86,7 @@ struct BodyMap: View {
     var body: some View {
         let used = store.lastUse(of: item)
         let suggested = store.suggestedSite(for: item)
+        let lastSite = store.intakes(of: item).last(where: { $0.site != nil })?.site
         Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
             GridRow {
                 Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
@@ -67,14 +96,14 @@ struct BodyMap: View {
             ForEach(Site.rows, id: \.region) { row in
                 GridRow {
                     Text(row.region).font(.callout)
-                    cell(row.left, used: used[row.left], suggested: suggested == row.left)
-                    cell(row.right, used: used[row.right], suggested: suggested == row.right)
+                    cell(row.left, used: used[row.left], suggested: suggested == row.left, last: lastSite == row.left)
+                    cell(row.right, used: used[row.right], suggested: suggested == row.right, last: lastSite == row.right)
                 }
             }
         }
     }
 
-    private func cell(_ site: Site, used: Date?, suggested: Bool) -> some View {
+    private func cell(_ site: Site, used: Date?, suggested: Bool, last: Bool) -> some View {
         let selected = selection == site
         return Button { selection = site } label: {
             VStack(spacing: 1) {
@@ -82,6 +111,9 @@ struct BodyMap: View {
                 if suggested {
                     Text("sugerido").font(.caption2.weight(.semibold))
                         .foregroundStyle(selected ? Color.white.opacity(0.85) : Color.accentColor)
+                } else if last {
+                    Text("última").font(.caption2.weight(.semibold))
+                        .foregroundStyle(selected ? Color.white.opacity(0.85) : Color.orange)
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 42)

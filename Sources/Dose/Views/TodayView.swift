@@ -22,12 +22,7 @@ struct TodayView: View {
             Divider()
 
             if store.active.isEmpty {
-                VStack(spacing: 8) {
-                    Text("Nada pra acompanhar ainda.").foregroundStyle(.secondary)
-                    Button("Adicionar item") { nav.screen = .edit(nil) }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(24)
+                Welcome()
             }
             if !ordered.isEmpty {
                 VStack(spacing: 0) {
@@ -43,8 +38,10 @@ struct TodayView: View {
                 }
                 .padding(.bottom, 6)
             }
-            if !ordered.isEmpty || !asNeeded.isEmpty { Divider() }
-            CounterSection()
+            if !store.active.isEmpty {
+                if !ordered.isEmpty || !asNeeded.isEmpty { Divider() }
+                CounterSection()
+            }
             if !reminders.authorized {
                 Divider()
                 HStack(spacing: 8) {
@@ -71,6 +68,31 @@ struct TodayView: View {
     private func progress(missing: Int, of total: Int) -> String? {
         guard total > 0 else { return nil }
         return missing == 0 ? "Tudo tomado hoje" : "Falta \(missing) de \(total)"
+    }
+}
+
+/// Primeira abertura: nada vem pronto, cada um monta a sua lista.
+private struct Welcome: View {
+    @EnvironmentObject private var nav: Nav
+
+    var body: some View {
+        VStack(spacing: 10) {
+            PillMark(tint: Tint.teal.color, style: .todo).scaleEffect(1.6).padding(.vertical, 8)
+            Text("O que você toma?").font(.title3.weight(.semibold))
+            Text("Adicione cada remédio ou suplemento com a frequência e os horários dele. Também dá pra contar dias sem alguma coisa.")
+                .font(.callout).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Button("Novo contador") { nav.screen = .newCounter }
+                Button("Adicionar item") { nav.screen = .edit(nil) }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(.top, 4)
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 20)
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -125,7 +147,8 @@ struct ItemRow: View {
                 .help("Registrar agora")
         case .pending(let since):
             let late = Format.days(from: since, to: store.now) > 0
-            Button { take() } label: { PillMark(tint: late ? .red : item.tint.color, style: .todo) }
+            Button { take() } label: { PillMark(tint: late ? .red : item.tint.color, style: .todo,
+                                                      progress: store.progress(of: item).map { Double($0.taken) / Double($0.total) } ?? 0) }
                 .buttonStyle(.plain)
                 .help(item.tracksSite ? "Registrar e escolher o local" : "Marcar como tomado")
         case .later:
@@ -151,9 +174,14 @@ struct ItemRow: View {
     private func detail(_ status: Status) -> String? {
         switch status {
         case .pending:
-            return item.tracksSite ? "Sugestão: \(store.suggestedSite(for: item).label.lowercased())" : nil
+            if item.tracksSite { return "Sugestão: \(store.suggestedSite(for: item).label.lowercased())" }
+            return store.progress(of: item).map { "\($0.taken) de \($0.total) hoje" }
         case .done(let intake):
             if let site = intake.site { return site.label }
+            if item.dosesPerDay > 1 {
+                let today = store.intakes(of: item).filter { $0.date >= Calendar.current.startOfDay(for: store.now) }
+                return "Doses às " + Format.list(today.map { Format.time($0.date) })
+            }
             let streak = store.streak(of: item)
             return item.schedule == .daily && streak > 1 ? "\(streak) dias seguidos" : nil
         case .later(_, let last):
@@ -173,9 +201,9 @@ struct ItemRow: View {
             let late = Format.days(from: since, to: store.now)
             if late > 0 {
                 Text("\(late) \(late == 1 ? "dia" : "dias") de atraso").font(.callout.weight(.medium)).foregroundStyle(.red)
-            } else if let reminder = item.reminder {
-                Text(reminder.label).font(.callout).monospacedDigit()
-                    .foregroundStyle(store.now >= reminder.on(since) ? Color.orange : Color.secondary)
+            } else if let next = store.nextTime(of: item, since: since) {
+                Text(next.label).font(.callout).monospacedDigit()
+                    .foregroundStyle(store.now >= next.on(since) ? Color.orange : Color.secondary)
             }
         case .done(let intake):
             Text(Format.time(intake.date)).font(.callout).monospacedDigit().foregroundStyle(.secondary)
@@ -196,14 +224,23 @@ struct PillMark: View {
     enum Style { case todo, done, later, add }
     let tint: Color
     let style: Style
+    /// Doses já tomadas no dia, de 0 a 1 (só nos itens com mais de uma dose).
+    var progress: Double = 0
 
     var body: some View {
         ZStack {
             switch style {
             case .todo:
-                // Meia cápsula tingida: lembra um comprimido e deixa claro que falta.
-                Capsule().fill(tint.opacity(0.22)).mask(alignment: .leading) {
-                    Rectangle().frame(width: 15)
+                if progress > 0 {
+                    // Enche da esquerda pra direita conforme as doses do dia.
+                    Capsule().fill(tint).mask(alignment: .leading) {
+                        Rectangle().frame(width: 30 * progress)
+                    }
+                } else {
+                    // Meia cápsula tingida: lembra um comprimido e deixa claro que falta.
+                    Capsule().fill(tint.opacity(0.22)).mask(alignment: .leading) {
+                        Rectangle().frame(width: 15)
+                    }
                 }
                 Capsule().strokeBorder(tint, lineWidth: 1.5)
             case .done:

@@ -72,7 +72,7 @@ struct EditView: View {
 
     init(item: Item?) {
         isNew = item == nil
-        _draft = ViewState(wrappedValue: item ?? Item(name: "", dose: "", schedule: .daily, reminder: Clock(hour: 9, minute: 0)))
+        _draft = ViewState(wrappedValue: item ?? Item(name: "", dose: "", schedule: .daily, times: [Clock(hour: 9, minute: 0)]))
     }
 
     var body: some View {
@@ -139,15 +139,38 @@ struct EditView: View {
                     }
                 }
                 if draft.schedule.isScheduled {
-                    GridRow {
-                        label("Lembrete")
-                        HStack {
-                            Toggle("", isOn: hasReminder).labelsHidden()
-                            if draft.reminder != nil {
-                                DatePicker("", selection: reminderTime, displayedComponents: .hourAndMinute)
-                                    .labelsHidden()
+                    GridRow(alignment: .firstTextBaseline) {
+                        label("Horários")
+                        VStack(alignment: .leading, spacing: 6) {
+                            // Cada horário é uma dose do dia.
+                            ForEach(draft.times.indices, id: \.self) { index in
+                                HStack(spacing: 6) {
+                                    DatePicker("", selection: time(at: index), displayedComponents: .hourAndMinute)
+                                        .labelsHidden()
+                                    Button { draft.times.remove(at: index) } label: {
+                                        Image(systemName: "minus.circle")
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .help("Tirar esse horário")
+                                    if index == 0 {
+                                        Text(draft.times.count == 1 ? "1 dose por dia" : "\(draft.times.count) doses por dia")
+                                            .font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
                             }
-                            Spacer()
+                            Button {
+                                // Próximo horário 3 h depois do último (pra 08:00 sugere 11:00).
+                                let last = draft.times.max() ?? Clock(hour: 6, minute: 0)
+                                draft.times.append(Clock(hour: min(23, last.hour + 3), minute: last.minute))
+                            } label: {
+                                Label(draft.times.isEmpty ? "Adicionar horário" : "Outra dose no dia", systemImage: "plus")
+                            }
+                            .buttonStyle(.borderless)
+                            if draft.times.isEmpty {
+                                Text("Sem horário: 1 dose por dia, sem aviso.").font(.caption).foregroundStyle(.secondary)
+                            } else {
+                                Toggle("Avisar nesses horários", isOn: $draft.remind)
+                            }
                         }
                     }
                 }
@@ -184,6 +207,7 @@ struct EditView: View {
                 Button("Salvar") {
                     draft.name = draft.name.trimmingCharacters(in: .whitespaces)
                     draft.dose = draft.dose.trimmingCharacters(in: .whitespaces)
+                    draft.times = Array(Set(draft.times)).sorted()
                     store.upsert(draft)
                     nav.screen = nav.origin
                 }
@@ -233,11 +257,7 @@ struct EditView: View {
                 draft.dose = ""
                 draft.tracksSite = false
             }
-            if !draft.schedule.isScheduled {
-                draft.reminder = nil
-            } else if draft.reminder == nil {
-                draft.reminder = Clock(hour: 9, minute: 0)
-            }
+            if !draft.schedule.isScheduled { draft.times = [] }
         }
     }
 
@@ -262,16 +282,14 @@ struct EditView: View {
         }
     }
 
-    private var hasReminder: Binding<Bool> {
-        Binding { draft.reminder != nil } set: { draft.reminder = $0 ? Clock(hour: 9, minute: 0) : nil }
-    }
-
-    private var reminderTime: Binding<Date> {
+    /// Horário de uma dose; confere o índice porque a linha pode ter acabado de ser removida.
+    private func time(at index: Int) -> Binding<Date> {
         Binding {
-            (draft.reminder ?? Clock(hour: 9, minute: 0)).on(Date())
+            (draft.times.indices.contains(index) ? draft.times[index] : Clock(hour: 9, minute: 0)).on(Date())
         } set: {
+            guard draft.times.indices.contains(index) else { return }
             let parts = Calendar.current.dateComponents([.hour, .minute], from: $0)
-            draft.reminder = Clock(hour: parts.hour ?? 9, minute: parts.minute ?? 0)
+            draft.times[index] = Clock(hour: parts.hour ?? 9, minute: parts.minute ?? 0)
         }
     }
 }

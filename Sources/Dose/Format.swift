@@ -18,9 +18,14 @@ enum Format {
         default:
             if sorted == [7, 1] { return "Fim de semana" }
             if sorted == [2, 3, 4, 5, 6] { return "Dias úteis" }
-            let names = sorted.map { String(weekdays[$0 - 1].prefix(3)) }
-            return (names.dropLast().joined(separator: ", ") + " e " + names.last!).capitalizedFirst
+            return list(sorted.map { String(weekdays[$0 - 1].prefix(3)) }).capitalizedFirst
         }
+    }
+
+    /// "a", "a e b", "a, b e c"
+    static func list(_ parts: [String]) -> String {
+        guard parts.count > 1 else { return parts.first ?? "" }
+        return parts.dropLast().joined(separator: ", ") + " e " + parts.last!
     }
 
     private static let locale = Locale(identifier: "pt_BR")

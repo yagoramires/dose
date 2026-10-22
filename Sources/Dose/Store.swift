@@ -30,7 +30,8 @@ final class Store: ObservableObject {
                 try? FileManager.default.copyItem(at: url, to: copy)
                 debugLog("dados.json ilegível, cópia em \(copy.lastPathComponent)")
             }
-            items = Item.examples
+            // Começa vazio: cada um adiciona e configura o que toma.
+            items = []
             intakes = []
             save()
         }
@@ -86,10 +87,11 @@ final class Store: ObservableObject {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: now)
         let last = last(item)
+        let doses = item.dosesPerDay
 
         switch item.schedule {
         case .daily:
-            if let last, last.date >= today { return .done(last) }
+            if let last, taken(item, since: today) >= doses { return .done(last) }
             return .pending(since: today)
 
         case .weekdays(let days):
@@ -102,14 +104,17 @@ final class Store: ObservableObject {
             let next = calendar.date(byAdding: .day, value: ahead, to: today)!
             // Uma vez por semana: tomar um dia antes também vale (ex.: viagem no dia da aplicação).
             let early = days.count == 1 ? calendar.date(byAdding: .day, value: -1, to: cycle)! : cycle
-            if let last, last.date >= early {
+            if let last, taken(item, since: early) >= doses {
                 return last.date >= today ? .done(last) : .later(next: next, last: last)
             }
             if cycle < calendar.startOfDay(for: item.created) { return .later(next: next, last: last) }
             return .pending(since: cycle)
 
         case .interval(let every):
-            if let last, last.date >= today { return .done(last) }
+            let todayCount = taken(item, since: today)
+            if let last, todayCount >= doses { return .done(last) }
+            // Começou as doses de hoje e falta alguma.
+            if todayCount > 0 { return .pending(since: today) }
             // Sem dose ainda: vale desde que o item foi criado.
             guard let last else { return .pending(since: max(calendar.startOfDay(for: item.created), today)) }
             let due = calendar.date(byAdding: .day, value: max(1, every), to: calendar.startOfDay(for: last.date))!
@@ -132,6 +137,27 @@ final class Store: ObservableObject {
             best = max(best, Format.days(from: from, to: to))
         }
         return best
+    }
+
+    /// Quantas doses desde o começo de um dia (pra itens com mais de uma dose por dia).
+    func taken(_ item: Item, since day: Date) -> Int {
+        intakes.reduce(0) { $0 + ($1.itemID == item.id && $1.date >= day ? 1 : 0) }
+    }
+
+    /// Doses tomadas e total do dia em andamento; nil quando é dose única.
+    func progress(of item: Item) -> (taken: Int, total: Int)? {
+        guard item.dosesPerDay > 1 else { return nil }
+        switch status(of: item) {
+        case .pending(let since): return (taken(item, since: since), item.dosesPerDay)
+        case .done: return (item.dosesPerDay, item.dosesPerDay)
+        default: return nil
+        }
+    }
+
+    /// Horário da próxima dose que falta (a 2ª de 08:00 e 20:00 depois de tomar a 1ª).
+    func nextTime(of item: Item, since: Date) -> Clock? {
+        guard !item.times.isEmpty else { return nil }
+        return item.times[min(taken(item, since: since), item.times.count - 1)]
     }
 
     /// Itens que ainda faltam: o número que aparece na barra de menus.

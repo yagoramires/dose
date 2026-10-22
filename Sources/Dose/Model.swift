@@ -68,7 +68,9 @@ enum Tint: String, Codable, CaseIterable {
     case teal, orange, purple, pink, blue, green, yellow, brown
 }
 
-struct Clock: Codable, Hashable {
+struct Clock: Codable, Hashable, Comparable {
+    static func < (lhs: Clock, rhs: Clock) -> Bool { (lhs.hour, lhs.minute) < (rhs.hour, rhs.minute) }
+
     var hour: Int
     var minute: Int
 
@@ -84,7 +86,10 @@ struct Item: Codable, Identifiable, Hashable {
     var name: String
     var dose: String
     var schedule: Schedule
-    var reminder: Clock?
+    /// Horário de cada dose do dia, em ordem: [08:00, 20:00] = duas doses. Vazio = uma dose sem hora.
+    var times: [Clock] = []
+    /// Avisar nos horários (com eles dá pra contar as doses sem receber notificação).
+    var remind = true
     var tint: Tint = .teal
     /// Pede o local da aplicação (injetáveis) e sugere o rodízio.
     var tracksSite = false
@@ -150,12 +155,13 @@ enum Status {
 }
 
 extension Item {
-    static var examples: [Item] {
+    /// Itens de mentira pro modo --snapshots.
+    static var samples: [Item] {
         [
-            Item(name: "Vitamina C", dose: "5 g", schedule: .daily, reminder: Clock(hour: 9, minute: 0), tint: .teal),
-            Item(name: "Vitamina D", dose: "1 cápsula", schedule: .daily, reminder: Clock(hour: 9, minute: 0),
+            Item(name: "Vitamina C", dose: "5 g", schedule: .daily, times: [Clock(hour: 9, minute: 0)], tint: .teal),
+            Item(name: "Vitamina D", dose: "1 cápsula", schedule: .daily, times: [Clock(hour: 9, minute: 0)],
                  tint: .orange),
-            Item(name: "Medicação semanal", dose: "", schedule: .weekdays([7]), reminder: Clock(hour: 9, minute: 0),
+            Item(name: "Medicação semanal", dose: "", schedule: .weekdays([7]), times: [Clock(hour: 9, minute: 0)],
                  tint: .purple, tracksSite: true),
             Item(name: "Chá", dose: "", schedule: .asNeeded, tint: .brown),
             Item(name: "Café", dose: "", schedule: .asNeeded, tint: .pink),
@@ -164,7 +170,7 @@ extension Item {
     }
 
     var scheduleLabel: String {
-        let time = reminder.map { " às \($0.label)" } ?? ""
+        let time = times.isEmpty ? "" : " às " + Format.list(times.map(\.label))
         switch schedule {
         case .daily: return "Todo dia" + time
         case .weekdays(let days): return Format.weekdays(days) + time
@@ -174,13 +180,18 @@ extension Item {
         }
     }
 
+    /// Doses por dia nos dias em que vale.
+    var dosesPerDay: Int { max(1, times.count) }
+
     /// Nome de exibição: contadores leem "dias sem comer doce".
     var title: String { schedule == .counter ? "Sem \(name)" : name }
 }
 
 extension Item {
     private enum CodingKeys: String, CodingKey {
-        case id, name, dose, schedule, reminder, tint, tracksSite, archived, created
+        case id, name, dose, schedule, times, remind, tint, tracksSite, archived, created
+        /// Formato da v0.1/v0.2: um horário só, que também era o lembrete.
+        case reminder
     }
 
     /// Campos novos entram com valor padrão, pra abrir os dados salvos por versões anteriores.
@@ -190,10 +201,30 @@ extension Item {
         name = try container.decode(String.self, forKey: .name)
         dose = try container.decodeIfPresent(String.self, forKey: .dose) ?? ""
         schedule = try container.decode(Schedule.self, forKey: .schedule)
-        reminder = try container.decodeIfPresent(Clock.self, forKey: .reminder)
+        if let times = try container.decodeIfPresent([Clock].self, forKey: .times) {
+            self.times = times.sorted()
+            remind = try container.decodeIfPresent(Bool.self, forKey: .remind) ?? true
+        } else {
+            times = try container.decodeIfPresent(Clock.self, forKey: .reminder).map { [$0] } ?? []
+            remind = true
+        }
         tint = try container.decodeIfPresent(Tint.self, forKey: .tint) ?? .teal
         tracksSite = try container.decodeIfPresent(Bool.self, forKey: .tracksSite) ?? false
         archived = try container.decodeIfPresent(Bool.self, forKey: .archived) ?? false
         created = try container.decodeIfPresent(Date.self, forKey: .created) ?? Date()
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(dose, forKey: .dose)
+        try container.encode(schedule, forKey: .schedule)
+        try container.encode(times.sorted(), forKey: .times)
+        try container.encode(remind, forKey: .remind)
+        try container.encode(tint, forKey: .tint)
+        try container.encode(tracksSite, forKey: .tracksSite)
+        try container.encode(archived, forKey: .archived)
+        try container.encode(created, forKey: .created)
     }
 }

@@ -10,6 +10,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
     private var subscriptions = Set<AnyCancellable>()
+    /// Escuta cliques nos outros apps enquanto a janelinha está aberta.
+    private var outsideClicks: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -76,14 +78,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         guard let button = statusItem.button else { return }
         tick()
         // App de barra não é ativo: sem isso os campos de texto não recebem teclado.
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
         if !popover.isShown {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        }
+        // O .transient sozinho não fecha quando o clique cai em outro app (o Dose nem sempre fica
+        // ativo); um monitor global pega esse clique. Cliques dentro do próprio app não chegam aqui.
+        if outsideClicks == nil {
+            outsideClicks = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+                self?.popover.performClose(nil)
+            }
         }
         popover.contentViewController?.view.window?.makeKey()
     }
 
     func popoverDidClose(_ notification: Notification) {
+        if let outsideClicks { NSEvent.removeMonitor(outsideClicks) }
+        outsideClicks = nil
         nav.screen = .today
     }
 }

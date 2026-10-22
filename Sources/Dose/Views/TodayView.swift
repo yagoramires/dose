@@ -10,7 +10,6 @@ struct TodayView: View {
         // Primeiro o que falta, depois o que já foi, por último os semanais fora do dia.
         let ordered = scheduled.sorted { rank($0) < rank($1) }
         let asNeeded = store.active.filter { $0.schedule == .asNeeded }
-        let counters = store.active.filter { $0.schedule == .counter }
         let missing = scheduled.filter { store.status(of: $0).isPending }.count
         let today = scheduled.filter { if case .later = store.status(of: $0) { false } else { true } }.count
 
@@ -43,16 +42,8 @@ struct TodayView: View {
                 }
                 .padding(.bottom, 6)
             }
-            if !counters.isEmpty {
-                if !ordered.isEmpty || !asNeeded.isEmpty { Divider() }
-                SectionTitle(text: "Contadores")
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible())], spacing: 8) {
-                    ForEach(counters) { CounterTile(item: $0) }
-                }
-                .padding(.horizontal, 14)
-                .padding(.top, 4)
-                .padding(.bottom, 14)
-            }
+            if !ordered.isEmpty || !asNeeded.isEmpty { Divider() }
+            CounterSection()
             if !reminders.authorized {
                 Divider()
                 HStack(spacing: 8) {
@@ -220,44 +211,6 @@ struct PillMark: View {
         }
         .frame(width: 30, height: 17)
         .contentShape(Capsule())
-    }
-}
-
-// MARK: Contador
-
-struct CounterTile: View {
-    @EnvironmentObject private var store: Store
-    let item: Item
-
-    var body: some View {
-        let since: Date = if case .counter(let since) = store.status(of: item) { since } else { item.created }
-        let days = Format.days(from: since, to: store.now)
-        let tint = item.tint.color
-
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("\(days)")
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                Text(days == 1 ? "dia" : "dias").font(.callout.weight(.semibold))
-                Spacer(minLength: 0)
-                ItemMenu(item: item, hovering: true)
-            }
-            .foregroundStyle(tint)
-            Text(item.title).font(.callout).lineLimit(2).fixedSize(horizontal: false, vertical: true)
-            Text(note(days: days, since: since)).font(.caption).foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(tint.opacity(0.12)))
-    }
-
-    private func note(days: Int, since: Date) -> String {
-        guard store.last(item) != nil else { return "Contando desde \(Format.date(since))" }
-        let record = store.record(of: item)
-        if days >= record { return days == 0 ? "Última vez hoje" : "Seu recorde" }
-        return "Recorde: \(record) dias"
     }
 }
 

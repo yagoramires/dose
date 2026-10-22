@@ -8,6 +8,7 @@ enum Screen: Equatable {
     case edit(Item?)
     /// Registrar com outro horário e/ou escolher o local.
     case log(UUID)
+    case newCounter
 }
 
 final class Nav: ObservableObject {
@@ -25,6 +26,7 @@ struct RootView: View {
             case .history: HistoryView()
             case .items: ItemsView()
             case .edit(let item): EditView(item: item)
+            case .newCounter: NewCounterView()
             case .log(let id):
                 if let item = store.item(id) { LogView(item: item) } else { TodayView() }
             }

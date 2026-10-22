@@ -24,12 +24,18 @@ enum Snapshots {
         for (week, site) in sites.enumerated() { store.take(semanal, at: ago(5 + 7 * (sites.count - 1 - week), 9), site: site) }
         store.take(cha, at: ago(0, 7, 40))
         store.take(cha, at: ago(0, 13, 15))
+        let doce = store.items[5]
+        store.take(doce, at: ago(30, 20))
+        store.take(doce, at: ago(12, 21))
+        var fastFood = Item(name: "fast food", dose: "", schedule: .counter, tint: .green)
+        fastFood.created = ago(19, 0)
+        store.upsert(fastFood)
 
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let nav = Nav()
         let screens: [(String, Screen)] = [
             ("1-hoje", .today), ("2-semanal", .log(semanal.id)), ("3-historico", .history),
-            ("4-itens", .items), ("5-editar", .edit(semanal)),
+            ("4-itens", .items), ("5-editar", .edit(semanal)), ("6-contador", .edit(nil)), ("7-zerar", .log(doce.id)),
         ]
         for appearance in [NSAppearance.Name.aqua, .darkAqua] {
             for (name, screen) in screens {

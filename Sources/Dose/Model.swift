@@ -6,6 +6,21 @@ enum Schedule: Codable, Hashable {
     case weekly(weekday: Int)
     /// Sem horário nem cobrança: só registra quando tomou (chá, café…).
     case asNeeded
+    /// "12 dias sem comer doce": conta os dias desde a última vez que aconteceu.
+    case counter
+
+    /// Entra na lista do dia (tem dia certo pra tomar).
+    var isScheduled: Bool {
+        switch self {
+        case .daily, .weekly: true
+        case .asNeeded, .counter: false
+        }
+    }
+}
+
+/// Cor da cápsula de cada item, pra reconhecer de relance.
+enum Tint: String, Codable, CaseIterable {
+    case teal, orange, purple, pink, blue, green, yellow, brown
 }
 
 struct Clock: Codable, Hashable {
@@ -25,6 +40,7 @@ struct Item: Codable, Identifiable, Hashable {
     var dose: String
     var schedule: Schedule
     var reminder: Clock?
+    var tint: Tint = .teal
     /// Pede o local da aplicação (injetáveis) e sugere o rodízio.
     var tracksSite = false
     /// Excluído pelo usuário: some da tela, mas o histórico continua com o nome.
@@ -45,6 +61,12 @@ enum Site: String, Codable, CaseIterable, Identifiable {
         ("Abdômen", .abdomenLeft, .abdomenRight),
         ("Coxa", .thighLeft, .thighRight),
     ]
+
+    /// "coxa esq.", pras linhas apertadas da tela principal.
+    var short: String {
+        let side = [.abdomenLeft, .thighLeft, .armLeft].contains(self) ? "esq." : "dir."
+        return "\(label.split(separator: " ")[0].lowercased()) \(side)"
+    }
 
     var label: String {
         switch self {
@@ -73,6 +95,8 @@ enum Status {
     /// Semanal fora do dia, já tomado no ciclo atual (ou ainda nem começou).
     case later(next: Date, last: Intake?)
     case asNeeded(today: [Intake])
+    /// Contador: `since` é a última vez que aconteceu (ou quando o contador foi criado).
+    case counter(since: Date)
 
     var isPending: Bool {
         if case .pending = self { return true }
@@ -83,12 +107,14 @@ enum Status {
 extension Item {
     static var examples: [Item] {
         [
-            Item(name: "Vitamina C", dose: "5 g", schedule: .daily, reminder: Clock(hour: 9, minute: 0)),
-            Item(name: "Vitamina D", dose: "1 cápsula", schedule: .daily, reminder: Clock(hour: 9, minute: 0)),
+            Item(name: "Vitamina C", dose: "5 g", schedule: .daily, reminder: Clock(hour: 9, minute: 0), tint: .teal),
+            Item(name: "Vitamina D", dose: "1 cápsula", schedule: .daily, reminder: Clock(hour: 9, minute: 0),
+                 tint: .orange),
             Item(name: "Medicação semanal", dose: "", schedule: .weekly(weekday: 7), reminder: Clock(hour: 9, minute: 0),
-                 tracksSite: true),
-            Item(name: "Chá", dose: "", schedule: .asNeeded),
-            Item(name: "Café", dose: "", schedule: .asNeeded),
+                 tint: .purple, tracksSite: true),
+            Item(name: "Chá", dose: "", schedule: .asNeeded, tint: .brown),
+            Item(name: "Café", dose: "", schedule: .asNeeded, tint: .pink),
+            Item(name: "comer doce", dose: "", schedule: .counter, tint: .blue),
         ]
     }
 
@@ -98,6 +124,30 @@ extension Item {
         case .daily: return "Todo dia" + time
         case .weekly(let weekday): return Format.every(weekday) + time
         case .asNeeded: return "Quando precisar"
+        case .counter: return "Contador de dias"
         }
+    }
+
+    /// Nome de exibição: contadores leem "dias sem comer doce".
+    var title: String { schedule == .counter ? "Sem \(name)" : name }
+}
+
+extension Item {
+    private enum CodingKeys: String, CodingKey {
+        case id, name, dose, schedule, reminder, tint, tracksSite, archived, created
+    }
+
+    /// Campos novos entram com valor padrão, pra abrir os dados salvos por versões anteriores.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        dose = try container.decodeIfPresent(String.self, forKey: .dose) ?? ""
+        schedule = try container.decode(Schedule.self, forKey: .schedule)
+        reminder = try container.decodeIfPresent(Clock.self, forKey: .reminder)
+        tint = try container.decodeIfPresent(Tint.self, forKey: .tint) ?? .teal
+        tracksSite = try container.decodeIfPresent(Bool.self, forKey: .tracksSite) ?? false
+        archived = try container.decodeIfPresent(Bool.self, forKey: .archived) ?? false
+        created = try container.decodeIfPresent(Date.self, forKey: .created) ?? Date()
     }
 }

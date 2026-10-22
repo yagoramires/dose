@@ -11,7 +11,8 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
     static let quiet = 7..<23
 
     private let store: Store
-    private let center = UNUserNotificationCenter.current()
+    // Preguiçoso: fora de um .app (modo --snapshots) o sistema derruba o processo ao pedir o center.
+    private lazy var center = UNUserNotificationCenter.current()
     private var nextNag: [UUID: Date] = [:]
     /// Só avisa com permissão; antes disso o aviso se perderia. Começa true pra não piscar o
     /// alerta de "notificações desligadas" enquanto o sistema não responde.

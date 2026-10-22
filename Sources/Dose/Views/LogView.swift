@@ -8,10 +8,14 @@ struct LogView: View {
     @ViewState private var date = Date()
     @ViewState private var site: Site?
 
+    private var subtitle: String {
+        if item.schedule == .counter { return "Quando foi a última vez" }
+        return item.dose.isEmpty ? "Registrar dose" : "Registrar \(item.dose)"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Header(title: item.name, subtitle: item.dose.isEmpty ? "Registrar dose" : "Registrar \(item.dose)",
-                   back: { nav.screen = .today })
+            Header(title: item.title, subtitle: subtitle, back: { nav.screen = .today })
             Divider()
             VStack(alignment: .leading, spacing: 14) {
                 DatePicker("Quando", selection: $date, in: ...Date().addingTimeInterval(60 * 60))
@@ -30,7 +34,7 @@ struct LogView: View {
                 HStack {
                     Spacer()
                     Button("Cancelar") { nav.screen = .today }
-                    Button("Registrar") {
+                    Button(item.schedule == .counter ? "Zerar contador" : "Registrar") {
                         store.take(item, at: date, site: site)
                         nav.screen = .today
                     }

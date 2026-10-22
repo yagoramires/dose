@@ -90,13 +90,36 @@ struct SectionTitle: View {
     let text: String
 
     var body: some View {
-        Text(text.uppercased())
-            .font(.caption2.weight(.semibold))
+        Text(text)
+            .font(.subheadline.weight(.semibold))
             .foregroundStyle(.secondary)
             .padding(.horizontal, 14)
             .padding(.top, 10)
             .padding(.bottom, 2)
     }
+}
+
+extension Tint {
+    /// Cores do sistema: se ajustam sozinhas ao modo escuro.
+    var color: Color { Color(nsColor: nsColor) }
+
+    private var nsColor: NSColor {
+        switch self {
+        case .teal: .systemTeal
+        case .orange: .systemOrange
+        case .purple: .systemPurple
+        case .pink: .systemPink
+        case .blue: .systemBlue
+        case .green: .systemGreen
+        case .yellow: .systemYellow
+        case .brown: .systemBrown
+        }
+    }
+}
+
+extension String {
+    /// "quinta-feira, 22 de outubro" → "Quinta-feira, 22 de outubro"
+    var capitalizedFirst: String { prefix(1).uppercased() + dropFirst() }
 }
 
 /// O mesmo que @State. No SDK atual @State virou macro, e o plugin dele só vem com o Xcode;

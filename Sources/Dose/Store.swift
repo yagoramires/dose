@@ -106,7 +106,21 @@ final class Store: ObservableObject {
 
         case .asNeeded:
             return .asNeeded(today: intakes(of: item).filter { $0.date >= today })
+
+        case .counter:
+            return .counter(since: last?.date ?? item.created)
         }
+    }
+
+    /// Contador: o maior intervalo, em dias, entre duas vezes (contando o atual).
+    func record(of item: Item) -> Int {
+        let dates = intakes(of: item).map(\.date)
+        let start = min(item.created, dates.first ?? item.created)
+        var best = 0
+        for (from, to) in zip([start] + dates, dates + [now]) {
+            best = max(best, Format.days(from: from, to: to))
+        }
+        return best
     }
 
     /// Itens que ainda faltam: o número que aparece na barra de menus.

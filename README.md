@@ -5,6 +5,8 @@ Controle de remédios e suplementos pela barra de menus do macOS. Um clique na p
 - **Todo dia** (vitamina C, vitamina D): marca com um clique, mostra a hora em que tomou e quantos dias seguidos.
 - **Uma vez por semana** (Medicação semanal): dia fixo, avisa se atrasou e pede o **local da aplicação** num mapa do corpo (braço, abdômen, coxa; esquerdo e direito), sugerindo o local usado há mais tempo pro rodízio. Tomar um dia antes também conta.
 - **Quando precisar** (chá, café): só registra, com contagem do dia.
+- **Contadores** ("12 dias sem comer doce"): número grande de dias desde a última vez, com o recorde. No ⋯ do bloco: "Aconteceu agora, zerar" ou registrar em outra data.
+- Cada item tem uma cor de cápsula, escolhida na edição; a cápsula vira o botão de marcar (meio cheia = falta, cheia com ✓ = tomado).
 - **Lembretes**: no horário marcado, só se ainda não tomou. Insiste a cada 2 h (das 7 h às 23 h) até marcar. Dá pra marcar "Tomei" ou adiar 30 min direto na notificação.
 - A pílula na barra mostra quantos itens ainda faltam hoje.
 - Histórico com tudo o que foi registrado, dá pra apagar um registro errado ou registrar com outro horário.

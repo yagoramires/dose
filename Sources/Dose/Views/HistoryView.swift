@@ -27,7 +27,8 @@ struct HistoryView: View {
                         if !streaks.isEmpty {
                             SectionTitle(text: "Sequências")
                             ForEach(streaks, id: \.0.id) { item, streak in
-                                HStack {
+                                HStack(spacing: 8) {
+                                    Circle().fill(item.tint.color).frame(width: 7, height: 7)
                                     Text(item.name)
                                     Spacer()
                                     Text("\(streak) dias seguidos").monospacedDigit().foregroundStyle(.secondary)
@@ -51,7 +52,7 @@ struct HistoryView: View {
 
     private func dayTitle(_ day: Date) -> String {
         let relative = Format.day(day, now: store.now)
-        return relative.contains("/") ? relative : "\(relative) · \(Format.long(day))"
+        return relative.contains("/") ? Format.long(day).capitalizedFirst : "\(relative.capitalizedFirst), \(Format.long(day))"
     }
 }
 
@@ -64,7 +65,9 @@ private struct HistoryRow: View {
         let item = store.item(intake.itemID)
         HStack(spacing: 8) {
             Text(Format.time(intake.date)).monospacedDigit().foregroundStyle(.secondary)
-            Text(item?.name ?? "Item apagado")
+            Circle().fill(item?.tint.color ?? .secondary).frame(width: 7, height: 7)
+            // Contador: o registro é o evento em si ("Comer doce").
+            Text(item.map { $0.schedule == .counter ? $0.name.capitalizedFirst : $0.name } ?? "Item apagado")
             if let dose = item?.dose, !dose.isEmpty {
                 Text(dose).foregroundStyle(.secondary)
             }

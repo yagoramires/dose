@@ -6,31 +6,34 @@ struct TodayView: View {
     @EnvironmentObject private var reminders: Reminders
 
     var body: some View {
-        let scheduled = store.active.filter { $0.schedule != .asNeeded }
+        let scheduled = store.active.filter { $0.schedule.isScheduled }
         // Primeiro o que falta, depois o que já foi, por último os semanais fora do dia.
         let ordered = scheduled.sorted { rank($0) < rank($1) }
         let asNeeded = store.active.filter { $0.schedule == .asNeeded }
-        let done = scheduled.filter { if case .done = store.status(of: $0) { true } else { false } }.count
-        let today = scheduled.count - scheduled.filter { if case .later = store.status(of: $0) { true } else { false } }.count
+        let counters = store.active.filter { $0.schedule == .counter }
+        let missing = scheduled.filter { store.status(of: $0).isPending }.count
+        let today = scheduled.filter { if case .later = store.status(of: $0) { false } else { true } }.count
 
         VStack(alignment: .leading, spacing: 0) {
-            Header(title: "Hoje", subtitle: subtitle(done: done, of: today)) {
+            Header(title: Format.long(store.now).capitalizedFirst, subtitle: progress(missing: missing, of: today)) {
                 IconButton(symbol: "clock.arrow.circlepath", help: "Histórico") { nav.screen = .history }
                 IconButton(symbol: "gearshape", help: "Itens e ajustes") { nav.screen = .items }
             }
             Divider()
 
             if store.active.isEmpty {
-                Text("Nenhum item. Adicione em ⚙︎.")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(24)
+                VStack(spacing: 8) {
+                    Text("Nada pra acompanhar ainda.").foregroundStyle(.secondary)
+                    Button("Adicionar item") { nav.screen = .edit(nil) }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(24)
             }
             if !ordered.isEmpty {
                 VStack(spacing: 0) {
                     ForEach(ordered) { ItemRow(item: $0) }
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, 6)
             }
             if !asNeeded.isEmpty {
                 if !ordered.isEmpty { Divider() }
@@ -40,11 +43,22 @@ struct TodayView: View {
                 }
                 .padding(.bottom, 6)
             }
+            if !counters.isEmpty {
+                if !ordered.isEmpty || !asNeeded.isEmpty { Divider() }
+                SectionTitle(text: "Contadores")
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible())], spacing: 8) {
+                    ForEach(counters) { CounterTile(item: $0) }
+                }
+                .padding(.horizontal, 14)
+                .padding(.top, 4)
+                .padding(.bottom, 14)
+            }
             if !reminders.authorized {
                 Divider()
                 HStack(spacing: 8) {
                     Image(systemName: "bell.slash").foregroundStyle(.orange)
-                    Text("Notificações desligadas: sem lembretes.").font(.callout)
+                    Text("Notificações desligadas, os lembretes não aparecem.").font(.callout)
+                        .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 4)
                     Button("Ligar") { reminders.openSettings() }
                 }
@@ -58,16 +72,17 @@ struct TodayView: View {
         switch store.status(of: item) {
         case .pending: 0
         case .done: 1
-        case .later, .asNeeded: 2
+        case .later, .asNeeded, .counter: 2
         }
     }
 
-    private func subtitle(done: Int, of total: Int) -> String {
-        let date = Format.long(store.now)
-        guard total > 0 else { return date }
-        return done == total ? "\(date) · tudo em dia ✓" : "\(date) · \(done) de \(total)"
+    private func progress(missing: Int, of total: Int) -> String? {
+        guard total > 0 else { return nil }
+        return missing == 0 ? "Tudo tomado hoje" : "Falta \(missing) de \(total)"
     }
 }
+
+// MARK: Linha de remédio
 
 struct ItemRow: View {
     @EnvironmentObject private var store: Store
@@ -77,10 +92,10 @@ struct ItemRow: View {
 
     var body: some View {
         let status = store.status(of: item)
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             check(status)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
                     Text(item.name).fontWeight(.medium)
                     if !item.dose.isEmpty {
                         Text(item.dose).font(.callout).foregroundStyle(.secondary)
@@ -92,7 +107,7 @@ struct ItemRow: View {
             }
             Spacer(minLength: 4)
             trailing(status)
-            menu(status)
+            ItemMenu(item: item, hovering: hovering)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 6)
@@ -100,34 +115,28 @@ struct ItemRow: View {
         .onHover { hovering = $0 }
     }
 
-    // MARK: Bolinha da esquerda
+    // MARK: Cápsula da esquerda
 
     @ViewBuilder private func check(_ status: Status) -> some View {
         switch status {
         case .done:
-            Image(systemName: "checkmark.circle.fill")
-                .font(.title2).foregroundStyle(.green)
-                .help("Tomado")
+            PillMark(tint: item.tint.color, style: .done).help("Tomado")
         case .asNeeded:
-            Button { take() } label: {
-                Image(systemName: "plus.circle").font(.title2)
-            }
-            .buttonStyle(.borderless)
-            .help("Registrar agora")
+            Button { take() } label: { PillMark(tint: item.tint.color, style: .add) }
+                .buttonStyle(.plain)
+                .help("Registrar agora")
         case .pending(let since):
-            Button { take() } label: {
-                Image(systemName: "circle").font(.title2)
-                    .foregroundStyle(Format.days(from: since, to: store.now) > 0 ? Color.red : Color.secondary)
-            }
-            .buttonStyle(.borderless)
-            .help(item.tracksSite ? "Registrar e escolher o local" : "Marcar como tomado")
+            let late = Format.days(from: since, to: store.now) > 0
+            Button { take() } label: { PillMark(tint: late ? .red : item.tint.color, style: .todo) }
+                .buttonStyle(.plain)
+                .help(item.tracksSite ? "Registrar e escolher o local" : "Marcar como tomado")
         case .later:
             // Fora do dia: abre a tela de registro pra confirmar, um clique solto não marca.
-            Button { nav.screen = .log(item.id) } label: {
-                Image(systemName: "circle.dashed").font(.title2).foregroundStyle(.tertiary)
-            }
-            .buttonStyle(.borderless)
-            .help("Registrar uma dose fora do dia")
+            Button { nav.screen = .log(item.id) } label: { PillMark(tint: item.tint.color, style: .later) }
+                .buttonStyle(.plain)
+                .help("Registrar uma dose fora do dia")
+        case .counter:
+            EmptyView()
         }
     }
 
@@ -151,10 +160,12 @@ struct ItemRow: View {
             return item.schedule == .daily && streak > 1 ? "\(streak) dias seguidos" : nil
         case .later(_, let last):
             guard let last else { return nil }
-            let site = last.site.map { " · \($0.label.lowercased())" } ?? ""
-            return "Última: \(Format.date(last.date))\(site)"
+            let site = last.site.map { ", \($0.short)" } ?? ""
+            return "Última em \(Format.date(last.date))\(site)"
         case .asNeeded(let today):
             return today.last.map { "Última às \(Format.time($0.date))" }
+        case .counter:
+            return nil
         }
     }
 
@@ -163,35 +174,118 @@ struct ItemRow: View {
         case .pending(let since):
             let late = Format.days(from: since, to: store.now)
             if late > 0 {
-                Text("atrasado \(late) \(late == 1 ? "dia" : "dias")").font(.caption.weight(.medium)).foregroundStyle(.red)
+                Text("\(late) \(late == 1 ? "dia" : "dias") de atraso").font(.callout.weight(.medium)).foregroundStyle(.red)
             } else if let reminder = item.reminder {
                 Text(reminder.label).font(.callout).monospacedDigit()
                     .foregroundStyle(store.now >= reminder.on(since) ? Color.orange : Color.secondary)
             }
         case .done(let intake):
-            Text(Format.time(intake.date)).font(.callout).monospacedDigit().foregroundStyle(.green)
+            Text(Format.time(intake.date)).font(.callout).monospacedDigit().foregroundStyle(.secondary)
         case .later(let next, _):
-            Text(Format.day(next, now: store.now)).font(.callout).foregroundStyle(.secondary)
+            Text(Format.day(next, now: store.now).capitalizedFirst).font(.callout).foregroundStyle(.secondary)
         case .asNeeded(let today):
             if !today.isEmpty {
                 Text("\(today.count)× hoje").font(.callout).monospacedDigit().foregroundStyle(.secondary)
             }
+        case .counter:
+            EmptyView()
         }
     }
+}
 
-    // MARK: Menu ⋯
+/// A cápsula que faz as vezes de checkbox, na cor do item.
+struct PillMark: View {
+    enum Style { case todo, done, later, add }
+    let tint: Color
+    let style: Style
 
-    private func menu(_ status: Status) -> some View {
+    var body: some View {
+        ZStack {
+            switch style {
+            case .todo:
+                // Meia cápsula tingida: lembra um comprimido e deixa claro que falta.
+                Capsule().fill(tint.opacity(0.22)).mask(alignment: .leading) {
+                    Rectangle().frame(width: 15)
+                }
+                Capsule().strokeBorder(tint, lineWidth: 1.5)
+            case .done:
+                Capsule().fill(tint)
+                Image(systemName: "checkmark").font(.system(size: 10, weight: .heavy)).foregroundStyle(.white)
+            case .later:
+                Capsule().strokeBorder(tint.opacity(0.55), style: StrokeStyle(lineWidth: 1.5, dash: [3, 2.5]))
+            case .add:
+                Capsule().fill(tint.opacity(0.16))
+                Image(systemName: "plus").font(.system(size: 10, weight: .heavy)).foregroundStyle(tint)
+            }
+        }
+        .frame(width: 30, height: 17)
+        .contentShape(Capsule())
+    }
+}
+
+// MARK: Contador
+
+struct CounterTile: View {
+    @EnvironmentObject private var store: Store
+    let item: Item
+
+    var body: some View {
+        let since: Date = if case .counter(let since) = store.status(of: item) { since } else { item.created }
+        let days = Format.days(from: since, to: store.now)
+        let tint = item.tint.color
+
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("\(days)")
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                Text(days == 1 ? "dia" : "dias").font(.callout.weight(.semibold))
+                Spacer(minLength: 0)
+                ItemMenu(item: item, hovering: true)
+            }
+            .foregroundStyle(tint)
+            Text(item.title).font(.callout).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            Text(note(days: days, since: since)).font(.caption).foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(tint.opacity(0.12)))
+    }
+
+    private func note(days: Int, since: Date) -> String {
+        guard store.last(item) != nil else { return "Contando desde \(Format.date(since))" }
+        let record = store.record(of: item)
+        if days >= record { return days == 0 ? "Última vez hoje" : "Seu recorde" }
+        return "Recorde: \(record) dias"
+    }
+}
+
+// MARK: Menu ⋯
+
+struct ItemMenu: View {
+    @EnvironmentObject private var store: Store
+    @EnvironmentObject private var nav: Nav
+    let item: Item
+    var hovering: Bool
+
+    var body: some View {
         let last = store.last(item)
-        return Menu {
-            Button("Registrar com outro horário…") { nav.screen = .log(item.id) }
+        let counter = item.schedule == .counter
+        Menu {
+            if counter {
+                Button("Aconteceu agora, zerar") { store.take(item) }
+                Button("Aconteceu em outra data…") { nav.screen = .log(item.id) }
+            } else {
+                Button("Registrar com outro horário…") { nav.screen = .log(item.id) }
+            }
             if let last {
-                Button("Desfazer dose de \(Format.day(last.date, now: store.now)) \(Format.time(last.date))") {
+                Button("Desfazer registro de \(Format.day(last.date, now: store.now)) às \(Format.time(last.date))") {
                     store.delete(last)
                 }
             }
             Divider()
-            Button("Editar \(item.name)…") { nav.screen = .edit(item) }
+            Button("Editar…") { nav.screen = .edit(item) }
         } label: {
             Image(systemName: "ellipsis")
         }

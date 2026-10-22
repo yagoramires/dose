@@ -15,10 +15,11 @@ struct ItemsView: View {
             VStack(spacing: 0) {
                 ForEach(store.active) { item in
                     Button { nav.screen = .edit(item) } label: {
-                        HStack {
+                        HStack(spacing: 10) {
+                            Circle().fill(item.tint.color).frame(width: 9, height: 9)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(item.dose.isEmpty ? item.name : "\(item.name) · \(item.dose)")
-                                Text(item.scheduleLabel + (item.tracksSite ? " · com local" : ""))
+                                Text(item.dose.isEmpty ? item.title : "\(item.title), \(item.dose)")
+                                Text(item.scheduleLabel + (item.tracksSite ? ", com local" : ""))
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -66,7 +67,8 @@ struct EditView: View {
     @ViewState private var draft: Item
     @ViewState private var confirmDelete = false
 
-    private enum Kind: Hashable { case daily, weekly, asNeeded }
+    private enum Kind: Hashable { case daily, weekly, asNeeded, counter }
+    private var isCounter: Bool { draft.schedule == .counter }
 
     init(item: Item?) {
         isNew = item == nil
@@ -75,25 +77,36 @@ struct EditView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Header(title: isNew ? "Novo item" : draft.name, back: { nav.screen = .items })
+            Header(title: isNew ? "Novo item" : draft.title, back: { nav.screen = .items })
             Divider()
             Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 10) {
                 GridRow {
-                    label("Nome")
-                    TextField("", text: $draft.name, prompt: Text("Vitamina C"))
-                }
-                GridRow {
-                    label("Dose")
-                    TextField("", text: $draft.dose, prompt: Text("5 g, 1 cápsula, 2,5 mg…"))
-                }
-                GridRow {
-                    label("Frequência")
+                    label("Tipo")
                     Picker("", selection: kind) {
                         Text("Todo dia").tag(Kind.daily)
                         Text("Uma vez por semana").tag(Kind.weekly)
                         Text("Quando precisar").tag(Kind.asNeeded)
+                        Divider()
+                        Text("Contador de dias sem…").tag(Kind.counter)
                     }
                     .labelsHidden()
+                }
+                GridRow {
+                    label(isCounter ? "Dias sem" : "Nome")
+                    TextField("", text: $draft.name, prompt: Text(isCounter ? "comer doce" : "Vitamina C"))
+                }
+                if !isCounter {
+                    GridRow {
+                        label("Dose")
+                        TextField("", text: $draft.dose, prompt: Text("5 g, 1 cápsula, 2,5 mg…"))
+                    }
+                }
+                if isCounter, isNew {
+                    GridRow {
+                        label("Última vez")
+                        DatePicker("", selection: $draft.created, in: ...Date(), displayedComponents: .date)
+                            .labelsHidden()
+                    }
                 }
                 if case .weekly = draft.schedule {
                     GridRow {
@@ -104,7 +117,7 @@ struct EditView: View {
                         .labelsHidden()
                     }
                 }
-                if draft.schedule != .asNeeded {
+                if draft.schedule.isScheduled {
                     GridRow {
                         label("Lembrete")
                         HStack {
@@ -117,9 +130,26 @@ struct EditView: View {
                         }
                     }
                 }
+                if !isCounter {
+                    GridRow {
+                        label("Local")
+                        Toggle("Pedir o local da aplicação", isOn: $draft.tracksSite)
+                    }
+                }
                 GridRow {
-                    label("Local")
-                    Toggle("Pedir o local da aplicação", isOn: $draft.tracksSite)
+                    label("Cor")
+                    HStack(spacing: 6) {
+                        ForEach(Tint.allCases, id: \.self) { tint in
+                            Button { draft.tint = tint } label: {
+                                Circle().fill(tint.color).frame(width: 18, height: 18)
+                                    .overlay(Circle().strokeBorder(.primary.opacity(draft.tint == tint ? 0.8 : 0), lineWidth: 2)
+                                        .padding(-3))
+                            }
+                            .buttonStyle(.plain)
+                            .help(tint.rawValue)
+                        }
+                    }
+                    .padding(.leading, 3)
                 }
             }
             .padding(14)
@@ -141,7 +171,12 @@ struct EditView: View {
             }
             .padding([.horizontal, .bottom], 14)
         }
-        .confirmationDialog("Excluir \(draft.name)?", isPresented: $confirmDelete) {
+        .onAppear {
+            // Item novo ganha a primeira cor que ninguém usa ainda.
+            guard isNew else { return }
+            draft.tint = Tint.allCases.first { tint in !store.active.contains { $0.tint == tint } } ?? .teal
+        }
+        .confirmationDialog("Excluir \(draft.title)?", isPresented: $confirmDelete) {
             Button("Excluir", role: .destructive) {
                 store.archive(draft)
                 nav.screen = .items
@@ -163,14 +198,19 @@ struct EditView: View {
             case .daily: .daily
             case .weekly: .weekly
             case .asNeeded: .asNeeded
+            case .counter: .counter
             }
         } set: { kind in
             switch kind {
             case .daily: draft.schedule = .daily
             case .weekly: draft.schedule = .weekly(weekday: Calendar.current.component(.weekday, from: Date()))
             case .asNeeded: draft.schedule = .asNeeded
+            case .counter:
+                draft.schedule = .counter
+                draft.dose = ""
+                draft.tracksSite = false
             }
-            if kind == .asNeeded { draft.reminder = nil }
+            if !draft.schedule.isScheduled { draft.reminder = nil }
         }
     }
 

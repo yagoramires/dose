@@ -30,6 +30,16 @@ struct RootView: View {
     @EnvironmentObject private var nav: Nav
 
     var body: some View {
+        VStack(spacing: 0) {
+            ReadOnlyBanner(inset: 10)
+            screen
+        }
+        .frame(width: 340)
+        .tint(Grafite.accent)
+        .grafiteWindow()
+    }
+
+    @ViewBuilder private var screen: some View {
         Group {
             switch nav.screen {
             case .today: TodayView()
@@ -41,9 +51,27 @@ struct RootView: View {
                 if let item = store.item(id) { LogView(item: item) } else { TodayView() }
             }
         }
-        .frame(width: 340)
-        .tint(Grafite.accent)
-        .grafiteWindow()
+    }
+}
+
+/// Só leitura (dados de uma versão mais nova ou ilegíveis): o que mudar na tela não é gravado.
+struct ReadOnlyBanner: View {
+    @EnvironmentObject private var store: Store
+    /// Margem em volta só quando aparece (no popover, que não tem espaçamento próprio).
+    var inset: CGFloat = 0
+
+    var body: some View {
+        if let text = store.readOnly {
+            Label(text, systemImage: "exclamationmark.triangle")
+                .font(.system(size: 11)).foregroundStyle(Grafite.warn)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Grafite.warnBg, in: RoundedRectangle(cornerRadius: 9))
+                .overlay(RoundedRectangle(cornerRadius: 9).stroke(Grafite.warnBorder, lineWidth: 1))
+                .accessibilityElement(children: .combine)
+                .padding([.horizontal, .top], inset)
+        }
     }
 }
 

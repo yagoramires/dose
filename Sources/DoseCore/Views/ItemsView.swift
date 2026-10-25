@@ -19,7 +19,11 @@ struct ItemsView: View {
             Line()
             VStack(alignment: .leading, spacing: 8) {
                 if shell.state.showsUpdate {
-                    Text("Atualização pronta — entra ao sair").font(.system(size: 11)).foregroundStyle(Grafite.accent)
+                    HStack {
+                        Text("Atualização pronta — entra ao sair").font(.system(size: 11)).foregroundStyle(Grafite.accent)
+                        Spacer()
+                        GPill(title: "Reiniciar agora") { shell.relaunch() }.accessibilityLabel("Reiniciar o Dose agora")
+                    }
                 }
                 if shell.state.showsLoginItem {
                     SwitchRow(title: "Abrir ao iniciar o Mac", isOn: Binding(get: { openAtLogin }, set: { setOpenAtLogin($0) }))

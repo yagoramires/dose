@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let updater = Updater(name: "Dose", repo: "yagoramires/dose", id: "local.dose")
         dose.updateReady = updater.staged != nil
         updater.onChange = { [weak dose, weak updater] in dose?.updateReady = updater?.staged != nil }
+        dose.onRelaunch = { [weak updater] in updater?.relaunchNow() }
         updater.start()
         self.updater = updater
         // Toda abertura: mostra as novidades uma vez e limpa um preparado velho.
@@ -46,8 +47,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appMenu.addItem(withTitle: "Sair do Dose", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         let item = NSMenuItem()
         item.submenu = appMenu
+        // Editar: sem ele ⌘C/⌘V/⌘Z não chegam aos campos de texto (nome do item, dose).
+        let edit = NSMenu(title: "Editar")
+        for (title, action, key, mods) in [("Desfazer", "undo:", "z", NSEvent.ModifierFlags.command), ("Refazer", "redo:", "z", [.command, .shift]),
+                                           ("Recortar", "cut:", "x", .command), ("Copiar", "copy:", "c", .command),
+                                           ("Colar", "paste:", "v", .command), ("Selecionar tudo", "selectAll:", "a", .command)] {
+            edit.addItem(withTitle: title, action: Selector(action), keyEquivalent: key).keyEquivalentModifierMask = mods
+            if action == "redo:" { edit.addItem(.separator()) }
+        }
+        let editItem = NSMenuItem()
+        editItem.submenu = edit
         NSApp.mainMenu = NSMenu()
         NSApp.mainMenu?.addItem(item)
+        NSApp.mainMenu?.addItem(editItem)
     }
 
     @objc private func showSettings() { dose?.showSettings() }

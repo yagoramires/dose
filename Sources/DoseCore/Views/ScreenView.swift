@@ -23,6 +23,7 @@ struct ScreenView: View {
             let wide = geometry.size.width >= 700
             let inner = geometry.size.width - 44
             VStack(alignment: .leading, spacing: 14) {
+                ReadOnlyBanner()
                 header(wide: wide)
                 ScrollView {
                     Group {

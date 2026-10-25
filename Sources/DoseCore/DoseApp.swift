@@ -36,6 +36,8 @@ public final class DoseApp: NSObject, NSPopoverDelegate {
     public var onShowScreen: (() -> Void)?
     /// Avulso: o Updater já preparou uma versão, que entra quando o app fechar.
     public var updateReady = false { didSet { shell.state.updateReady = updateReady } }
+    /// Avulso: "Reiniciar agora" ao lado da linha de atualização; a casca liga ao `Updater.relaunchNow`.
+    public var onRelaunch: (() -> Void)?
 
     public convenience init(defaults: UserDefaults, hosted: Bool, version: String) {
         self.init(defaults: defaults, hosted: hosted, version: version, storeURL: Store.defaultURL, center: nil)
@@ -53,6 +55,8 @@ public final class DoseApp: NSObject, NSPopoverDelegate {
             self?.popover.performClose(nil)
             self?.showSettings()
         }
+        // Hospedado quem atualiza e reinicia é o NeyHub.
+        shell.relaunch = { [weak self] in if self?.hosted == false { self?.onRelaunch?() } }
     }
 
     public func start() {
@@ -279,6 +283,7 @@ struct PopoverState: Equatable {
 final class Shell: ObservableObject {
     @Published var state: PopoverState
     var showSettings: () -> Void = {}
+    var relaunch: () -> Void = {}
 
     init(state: PopoverState) { self.state = state }
 }

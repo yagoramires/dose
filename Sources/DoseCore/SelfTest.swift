@@ -11,6 +11,7 @@ extension DoseApp {
         try! FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
         storeLoads(folder)
+        storeReadOnly(folder)
         hostedLeavesLoginItem(folder)
         reminders(folder)
         routing(folder)
@@ -53,6 +54,40 @@ extension DoseApp {
         precondition(store.items[1].schedule == .weekdays([7]) && store.items[1].times == [Clock(hour: 9, minute: 0)])
         let files = try! FileManager.default.contentsOfDirectory(atPath: folder.path)
         precondition(files == ["dados.json"], "\(files)")
+    }
+
+    /// dados.json de uma versão mais nova (schema 2) ou ilegível: só leitura com aviso; o arquivo fica intacto depois de uma ação.
+    static func storeReadOnly(_ parent: URL) {
+        let fm = FileManager.default
+        let folder = parent.appendingPathComponent("somente-leitura")
+        try! fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: folder) }
+        func text(_ url: URL) -> String { try! String(contentsOf: url, encoding: .utf8) }
+
+        let newer = folder.appendingPathComponent("novo.json")
+        let future = #"{"schema":2,"items":[],"intakes":[],"campoNovo":true}"#
+        try! Data(future.utf8).write(to: newer)
+        let s2 = Store(url: newer)
+        precondition(s2.readOnly == "Dados de uma versão mais nova do Dose — atualize", "\(String(describing: s2.readOnly))")
+        s2.upsert(Item(name: "X", dose: "", schedule: .daily))
+        precondition(text(newer) == future, "schema 2 foi regravado")
+
+        let broken = folder.appendingPathComponent("quebrado.json")
+        try! Data("{ nada".utf8).write(to: broken)
+        let s3 = Store(url: broken)
+        precondition(s3.readOnly?.hasPrefix("Não deu pra ler os dados do Dose") == true && s3.items.isEmpty)
+        s3.upsert(Item(name: "X", dose: "", schedule: .daily))
+        precondition(text(broken) == "{ nada", "ilegível foi regravado")
+        precondition(try! fm.contentsOfDirectory(atPath: folder.path).contains { $0.hasPrefix("quebrado.ilegivel-") }, "sem cópia ilegível")
+
+        // Sem `schema` é a 0.1.0 (= 1): abre normal e passa a gravar com schema 1.
+        let old = folder.appendingPathComponent("velho.json")
+        try! Data(#"{"items":[],"intakes":[]}"#.utf8).write(to: old)
+        let s1 = Store(url: old)
+        precondition(s1.readOnly == nil)
+        s1.upsert(Item(name: "X", dose: "", schedule: .daily))
+        let saved = try! JSONSerialization.jsonObject(with: Data(contentsOf: old)) as! [String: Any]
+        precondition(saved["schema"] as? Int == 1 && (saved["items"] as? [Any])?.count == 1, "\(saved)")
     }
 
     /// Hospedado: o login é o do NeyHub. Não grava `loginItemOffered` (nem no defaults injetado nem no `.standard`)
@@ -222,6 +257,17 @@ extension DoseApp {
         precondition(!hosted.showsLoginItem && !hosted.showsQuit && !hosted.showsSettings && !hosted.showsUpdate, "\(hosted)")
         precondition(alone.showsLoginItem && alone.showsQuit && alone.showsSettings && alone.showsUpdate, "\(alone)")
         precondition(hosted.version == "9.8.7" && alone.version == "9.8.7")
+        // "Reiniciar agora" (linha de atualização, só avulso): hospedado não chega à casca.
+        for isHosted in [true, false] {
+            let (d, name) = tempDefaults()
+            defer { d.removePersistentDomain(forName: name) }
+            let app = DoseApp(defaults: d, hosted: isHosted, version: "9.8.7",
+                              storeURL: folder.appendingPathComponent("reiniciar-\(isHosted).json"), center: FakeNotifier(status: .authorized))
+            var relaunched = 0
+            app.onRelaunch = { relaunched += 1 }
+            app.shell.relaunch()
+            precondition(relaunched == (isHosted ? 0 : 1), "Reiniciar agora hospedado=\(isHosted): \(relaunched)")
+        }
 
         // Avulso sem escolha salva: só barra de menus, como na 0.1.0. Escolha salva vale.
         let (d, name) = tempDefaults()

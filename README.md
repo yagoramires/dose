@@ -50,13 +50,13 @@ Clique na pílula na barra de menus.
 - A pílula na barra mostra quantos itens ainda faltam hoje.
 - Histórico com tudo o que foi registrado, dá pra apagar um registro errado ou registrar com outro horário.
 - **Tela do Dose** (modo **Janela**, ou a tela do Dose dentro do NeyHub): o mesmo do popover, com espaço. Abas **Hoje** (agenda do dia com os atrasados no topo e depois por horário, os "quando precisar" como botões grandes, os contadores e a grade dos últimos 7 dias), **Histórico** (grade de 14 dias por item com a sequência atual, o rodízio de local e a lista de registros, onde dá pra apagar um) e **Itens** (a lista com o formulário de edição aberto ao lado). **+ Novo** cria um item; registrar com outro horário e novo contador abrem por cima. Na grade: verde-limão = completo, verde escuro = parcial, vermelho escuro = esquecido.
-- **Itens e ajustes** (a engrenagem): lista dos itens, **Abrir ao iniciar o Mac**, **Abrir pasta dos dados**, **Configurações…** e **Sair do Dose**. Quando uma versão nova já foi baixada, aparece **Atualização pronta — entra ao sair**.
+- **Itens e ajustes** (a engrenagem): lista dos itens, **Abrir ao iniciar o Mac**, **Abrir pasta dos dados**, **Configurações…** e **Sair do Dose**. Quando uma versão nova já foi baixada, aparece **Atualização pronta — entra ao sair**, com **Reiniciar agora** para trocar e reabrir na hora.
 
-Os dados ficam em `~/Library/Application Support/Dose/dados.json` (o mesmo arquivo no avulso e no NeyHub) e o log em `~/Library/Logs/Dose/dose.log`.
+Os dados ficam em `~/Library/Application Support/Dose/dados.json` (o mesmo arquivo no avulso e no NeyHub) e o log em `~/Library/Logs/Dose/dose.log`. Se o arquivo for de uma versão mais nova do Dose, ou não abrir, o Dose mostra os dados que conseguiu ler com um aviso no topo e não grava nada por cima até você atualizar ou corrigir; um arquivo que não abre ganha antes uma cópia `dados.ilegivel-<data>.json` ao lado.
 
 ## Atalhos
 
-O Dose não tem atalho global. Nos formulários, Return confirma e Esc cancela. No modo **Janela**, `⌘,` abre as configurações e `⌘Q` fecha o Dose.
+O Dose não tem atalho global. Nos formulários, Return confirma e Esc cancela. No modo **Janela**, `⌘,` abre as configurações e `⌘Q` fecha o Dose. Nos campos de texto valem os atalhos de edição de sempre (`⌘Z`, `⇧⌘Z`, `⌘X`, `⌘C`, `⌘V`, `⌘A`), pelo menu **Editar**.
 
 ## Modos de exibição
 
@@ -68,11 +68,11 @@ Em **Itens e ajustes → Configurações…** você escolhe onde o Dose aparece,
 - **Janela**: ícone no Dock e a tela do Dose. Clicar no ícone do Dock traz a janela de volta; o menu **Dose → Configurações…** (`⌘,`) abre as configurações.
 - **Os dois**.
 
-Desligar os dois não vale: o outro volta a ligar. Os lembretes chegam em qualquer modo, enquanto o Dose estiver aberto. Dentro do NeyHub o modo é escolhido no card do Dose, na Loja.
+Desligar os dois não vale: o outro volta a ligar. Os lembretes chegam em qualquer modo, enquanto o Dose estiver aberto. Dentro do NeyHub o modo é escolhido no card do Dose, na Loja; sem escolha salva, lá o padrão é **Os dois**. Avulso e NeyHub guardam o modo no mesmo lugar: a escolha feita no NeyHub vale também para o avulso (e a do avulso, para o NeyHub).
 
 ## Atualizações
 
-Desde a 0.2.0, o Dose confere 5 s depois de abrir e a cada 6 h se tem versão nova, baixa sozinho e só troca o app quando você fecha o Dose: nunca reinicia no meio do uso. Na próxima abertura, mostra uma vez a janela **Novidades** com o que mudou. A versão baixada só é instalada se tiver sido assinada pelo mesmo certificado do app em uso, então a permissão de notificações continua valendo. Dentro do NeyHub, quem atualiza é o NeyHub.
+Desde a 0.2.0, o Dose confere 5 s depois de abrir e a cada 6 h se tem versão nova, baixa sozinho e só troca o app quando você fecha o Dose (ou clica em **Reiniciar agora**, em **Itens e ajustes**): nunca reinicia sozinho no meio do uso. Na próxima abertura, mostra uma vez a janela **Novidades** com o que mudou. A versão baixada só é instalada se tiver sido assinada pelo mesmo certificado do app em uso, então a permissão de notificações continua valendo. Dentro do NeyHub, quem atualiza é o NeyHub.
 
 Quem está na 0.1.0 precisa instalar a 0.2.0 uma vez à mão (ela ainda não tinha atualização automática). Os dados ficam onde estão.
 

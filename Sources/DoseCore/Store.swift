@@ -11,36 +11,50 @@ final class Store: ObservableObject {
     /// Relógio que as telas observam: muda a cada minuto pra virar o dia e os atrasos sozinho.
     @Published var now = Date()
 
+    /// Formato que esta versão grava; arquivo sem `schema` é o da 0.1.0 (= 1).
+    static let schema = 1
+    /// Aviso de só leitura (dados de uma versão mais nova, ou ilegíveis): nada é gravado por cima.
+    @Published private(set) var readOnly: String?
+
     private let url: URL
     private struct Snapshot: Codable {
+        var schema: Int?
         var items: [Item]
         var intakes: [Intake]
     }
+    private struct Header: Decodable { var schema: Int? }
 
     init(url: URL) {
         self.url = url
-        if let data = try? Data(contentsOf: url),
-           let snapshot = try? JSONDecoder.dose.decode(Snapshot.self, from: data) {
-            items = snapshot.items
-            intakes = snapshot.intakes.sorted { $0.date < $1.date }
-        } else {
-            // Arquivo existe mas não abriu: guarda uma cópia antes de recomeçar, pra não perder o histórico.
-            if FileManager.default.fileExists(atPath: url.path) {
-                let copy = url.deletingPathExtension().appendingPathExtension("ilegivel-\(Int(Date().timeIntervalSince1970)).json")
-                try? FileManager.default.copyItem(at: url, to: copy)
-                debugLog("dados.json ilegível, cópia em \(copy.lastPathComponent)")
-            }
+        guard FileManager.default.fileExists(atPath: url.path) else {
             // Começa vazio: cada um adiciona e configura o que toma.
             items = []
             intakes = []
             save()
+            return
+        }
+        let data = try? Data(contentsOf: url)
+        let schema = data.flatMap { try? JSONDecoder().decode(Header.self, from: $0) }.map { $0.schema ?? 1 }
+        let snapshot = data.flatMap { try? JSONDecoder.dose.decode(Snapshot.self, from: $0) }
+        items = snapshot?.items ?? []
+        intakes = (snapshot?.intakes ?? []).sorted { $0.date < $1.date }
+        if let schema, schema > Self.schema {
+            readOnly = "Dados de uma versão mais nova do Dose — atualize"
+            debugLog("dados.json schema \(schema) (este lê até \(Self.schema)): só leitura")
+        } else if snapshot == nil {
+            // Não abriu: guarda uma cópia e não grava um vazio por cima, pra não perder o histórico.
+            let copy = url.deletingPathExtension().appendingPathExtension("ilegivel-\(Int(Date().timeIntervalSince1970)).json")
+            try? FileManager.default.copyItem(at: url, to: copy)
+            readOnly = "Não deu pra ler os dados do Dose — nada é salvo (cópia em \(copy.lastPathComponent))"
+            debugLog("dados.json ilegível, cópia em \(copy.lastPathComponent): só leitura")
         }
     }
 
     private func save() {
+        guard readOnly == nil else { return debugLog("só leitura: não salvou") }
         do {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            let data = try JSONEncoder.dose.encode(Snapshot(items: items, intakes: intakes))
+            let data = try JSONEncoder.dose.encode(Snapshot(schema: Self.schema, items: items, intakes: intakes))
             try data.write(to: url, options: .atomic)
         } catch {
             debugLog("falhou ao salvar: \(error)")

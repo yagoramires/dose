@@ -16,7 +16,7 @@ Requer macOS 14 ou mais novo. Roda nativo em Apple Silicon e Intel. Também dá 
 
 ### Pelo NeyHub
 
-Quem usa o [NeyHub](https://github.com/yagoramires/neyhub) pode instalar o Dose pela Loja dele (o `Dose-x.y.z.neyplugin` do release). Aí o Dose roda dentro do NeyHub, com os mesmos dados do avulso (`dados.json`): a pílula e o popover são os mesmos, os lembretes chegam como NeyHub (a permissão de notificações é do NeyHub, pela tela **Permissões**), o NeyHub cuida do login, das atualizações e de mostrar ou esconder a pílula, e o popover não tem **Abrir ao iniciar o Mac**, **Configurações…**, **Sair do Dose** nem a linha **Atualização pronta**. Feche o Dose avulso antes: se o NeyHub já roda o Dose, o avulso avisa (um aviso só), sai dos itens de login e fecha.
+Quem usa o [NeyHub](https://github.com/yagoramires/neyhub) pode instalar o Dose pela Loja dele (o `Dose-x.y.z.neyplugin` do release). Aí o Dose roda dentro do NeyHub, com os mesmos dados do avulso (`dados.json`): a pílula e o popover são os mesmos, os lembretes chegam como NeyHub (a permissão de notificações é do NeyHub, pela tela **Permissões**), tocar num lembrete abre a tela do Dose na janela do NeyHub (em **Escolher local…**, já no registro do item), o NeyHub cuida do login, das atualizações e de mostrar ou esconder a pílula, e o popover não tem **Abrir ao iniciar o Mac**, **Configurações…**, **Sair do Dose** nem a linha **Atualização pronta**. Feche o Dose avulso antes: se o NeyHub já roda o Dose, o avulso avisa (um aviso só), sai dos itens de login e fecha.
 
 ### Desinstalar
 
@@ -49,6 +49,7 @@ Clique na pílula na barra de menus.
 - **Lembretes**: no horário marcado, só se ainda não tomou. Insiste a cada 2 h (das 7 h às 23 h) até marcar. Dá pra marcar "Tomei" ou adiar 30 min direto na notificação.
 - A pílula na barra mostra quantos itens ainda faltam hoje.
 - Histórico com tudo o que foi registrado, dá pra apagar um registro errado ou registrar com outro horário.
+- **Tela do Dose** (modo **Janela**, ou a tela do Dose dentro do NeyHub): o mesmo do popover, com espaço. Abas **Hoje** (agenda do dia com os atrasados no topo e depois por horário, os "quando precisar" como botões grandes, os contadores e a grade dos últimos 7 dias), **Histórico** (grade de 14 dias por item com a sequência atual, o rodízio de local e a lista de registros, onde dá pra apagar um) e **Itens** (a lista com o formulário de edição aberto ao lado). **+ Novo** cria um item; registrar com outro horário e novo contador abrem por cima. Na grade: verde-limão = completo, verde escuro = parcial, vermelho escuro = esquecido.
 - **Itens e ajustes** (a engrenagem): lista dos itens, **Abrir ao iniciar o Mac**, **Abrir pasta dos dados**, **Configurações…** e **Sair do Dose**. Quando uma versão nova já foi baixada, aparece **Atualização pronta — entra ao sair**.
 
 Os dados ficam em `~/Library/Application Support/Dose/dados.json` (o mesmo arquivo no avulso e no NeyHub) e o log em `~/Library/Logs/Dose/dose.log`.
@@ -106,7 +107,7 @@ O miolo fica em `Sources/DoseCore` e é o mesmo no app avulso e no plugin do Ney
 | `DoseApp.swift` | Pílula e popover da barra, modos de exibição, configurações e `stop()` (desinstalar no NeyHub). Recebe os `UserDefaults`, se está hospedado e a versão. |
 | `Store.swift`, `Model.swift` | Itens e doses em `~/Library/Application Support/Dose/dados.json`. |
 | `Reminders.swift` | Lembretes. Avisos e categorias com o prefixo `local.dose.`, que o NeyHub usa pra entregar a resposta ao Dose. Dentro do NeyHub não pede a permissão nem vira delegate das notificações (é o NeyHub que faz). |
-| `Views/` | O popover, em SwiftUI no tema Grafite do NeyKit. `ScreenView.swift` é o lugar da tela de app (ainda provisória). |
+| `Views/` | O popover e a tela de app (`ScreenView.swift`, que reaproveita as linhas e os formulários do popover), em SwiftUI no tema Grafite do NeyKit. |
 | `SettingsView.swift` | Configurações (janela do avulso e card no NeyHub). |
 | `Log.swift`, `Format.swift` | Log de depuração com rotação e formatação de datas. |
 | `SelfTest.swift` | `--selftest` (rode com `scripts/selftest.sh`). Usa arquivo temporário e um centro de notificações falso. |

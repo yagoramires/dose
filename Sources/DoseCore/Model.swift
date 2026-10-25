@@ -137,6 +137,9 @@ struct Intake: Codable, Identifiable, Hashable {
     var site: Site?
 }
 
+/// Um dia na grade da tela de app.
+enum DayMark { case none, done, partial, missed }
+
 enum Status {
     /// Precisa tomar. `since` é o dia em que passou a valer (antes de hoje = atrasado).
     case pending(since: Date)

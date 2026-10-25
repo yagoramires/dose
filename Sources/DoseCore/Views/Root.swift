@@ -18,6 +18,11 @@ final class Nav: ObservableObject {
     }
     /// Tela de lista de onde se abriu um formulário: é pra lá que o voltar/salvar leva.
     private(set) var origin: Screen = .today
+
+    /// Marcar pela cápsula: com local, abre o registro pra escolher o lugar; senão marca agora.
+    func take(_ item: Item, store: Store) {
+        if item.tracksSite { screen = .log(item.id) } else { store.take(item) }
+    }
 }
 
 struct RootView: View {
@@ -127,15 +132,29 @@ struct Chip: View {
     }
 }
 
-/// Botões dos formulários: GPill com o apagado de quando não dá pra confirmar.
+/// Botões dos formulários: GPill com o apagado de quando não dá pra confirmar. `destructive`: contorno vermelho (Excluir).
 struct FormButton: View {
     @Environment(\.isEnabled) private var enabled
     let title: String
     var style: GPill.Style = .ghost
+    var destructive = false
     let action: () -> Void
 
     var body: some View {
-        GPill(title: title, style: style, action: action).opacity(enabled ? 1 : 0.4)
+        Group {
+            if destructive {
+                Button(action: action) {
+                    Text(title).font(.system(size: 10, weight: .bold)).foregroundStyle(.red)
+                        .padding(.horizontal, 9).padding(.vertical, 4)
+                        .overlay(Capsule().stroke(Color.red.opacity(0.5), lineWidth: 1))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            } else {
+                GPill(title: title, style: style, action: action)
+            }
+        }
+        .opacity(enabled ? 1 : 0.4)
     }
 }
 

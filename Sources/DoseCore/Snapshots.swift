@@ -24,6 +24,9 @@ enum Snapshots {
         for day in 1...9 { store.take(vitaminaC, at: ago(day, 8, 10)) }
         store.take(vitaminaC, at: ago(0, 8, 12))
         store.take(multi, at: ago(1, 9, 3))
+        // Semana com de tudo na grade da tela: completo, parcial (C tem duas doses) e esquecido.
+        for day in [2, 3, 5, 6, 7, 8, 10, 11, 12, 13] { store.take(multi, at: ago(day, 9, 5)) }
+        for day in [1, 3, 4, 6, 7, 9] { store.take(vitaminaC, at: ago(day, 20, 5)) }
         let sites: [Site] = [.armLeft, .armRight, .abdomenLeft]
         for (week, site) in sites.enumerated() { store.take(semanal, at: ago(5 + 7 * (sites.count - 1 - week), 9), site: site) }
         store.take(cha, at: ago(0, 7, 40))
@@ -81,7 +84,14 @@ enum Snapshots {
             .environmentObject(Reminders(store: store)), to: folder.appendingPathComponent("settings.png"))
         render(SettingsView(version: "0.2.0", presence: nil, onPresence: { _ in }).environmentObject(off),
                to: folder.appendingPathComponent("settings-neyhub.png"))
-        render(ScreenView().frame(width: 820, height: 560), to: folder.appendingPathComponent("screen.png"))
+        // Tela de app no tamanho da área do NeyHub com a janela no padrão; a estreita confere o empilhar das colunas.
+        let screenNav = Nav()
+        for (name, screen, width) in [("screen", Screen.today, 790.0), ("screen-historico", .history, 790), ("screen-itens", .edit(semanal), 790),
+                                      ("screen-estreita", .today, 520)] {
+            screenNav.screen = screen
+            render(ScreenView().environmentObject(store).environmentObject(screenNav).environmentObject(Reminders(store: store))
+                .environmentObject(alone).frame(width: width, height: 560), to: folder.appendingPathComponent("\(name).png"))
+        }
         print("✓ \(folder.path)")
     }
 

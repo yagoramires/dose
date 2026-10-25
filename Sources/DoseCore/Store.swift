@@ -160,8 +160,42 @@ final class Store: ObservableObject {
         return item.times[min(taken(item, since: since), item.times.count - 1)]
     }
 
+    /// Horário da coluna da tela de app: o da próxima dose; feito, o último do dia; atrasado ou fora do dia, nenhum.
+    func clock(of item: Item) -> Clock? {
+        switch status(of: item) {
+        case .pending(let since): Format.days(from: since, to: now) > 0 ? nil : nextTime(of: item, since: since)
+        case .done: item.times.last
+        default: nil
+        }
+    }
+
     /// Itens que ainda faltam: o número que aparece na barra de menus.
     var due: [Item] { active.filter { status(of: $0).isPending } }
+
+    /// Grade dos últimos dias na tela de app: como ficou `item` no dia de `day`.
+    func mark(of item: Item, on day: Date) -> DayMark {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: day)
+        let end = calendar.date(byAdding: .day, value: 1, to: start)!
+        let count = intakes.reduce(0) { $0 + ($1.itemID == item.id && $1.date >= start && $1.date < end ? 1 : 0) }
+        if count >= item.dosesPerDay { return .done }
+        if count > 0 { return .partial }
+        // Hoje ainda dá tempo; antes de o item existir não havia o que tomar.
+        guard start < calendar.startOfDay(for: now), start >= calendar.startOfDay(for: item.created) else { return .none }
+        switch item.schedule {
+        case .daily:
+            return .missed
+        case .weekdays(let days):
+            guard days.contains(calendar.component(.weekday, from: start)) else { return .none }
+            // Uma vez por semana: tomar na véspera também vale (como em status(of:)).
+            let eve = calendar.date(byAdding: .day, value: -1, to: start)!
+            if days.count == 1, intakes.contains(where: { $0.itemID == item.id && $0.date >= eve && $0.date < start }) { return .none }
+            return .missed
+        // shortcut: "a cada N dias" não marca esquecido (o vencimento depende da dose anterior); calcular se fizer falta.
+        case .interval, .asNeeded, .counter:
+            return .none
+        }
+    }
 
     /// Último uso de cada local por este item.
     func lastUse(of item: Item) -> [Site: Date] {

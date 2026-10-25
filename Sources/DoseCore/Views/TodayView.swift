@@ -45,15 +45,7 @@ struct TodayView: View {
             }
             if !reminders.authorized {
                 Line()
-                HStack(spacing: 8) {
-                    Image(systemName: "bell.slash").foregroundStyle(Grafite.warn)
-                    Text("Notificações desligadas, os lembretes não aparecem.").font(.callout).foregroundStyle(Grafite.warn)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 4)
-                    GPill(title: "Ligar") { reminders.openSettings() }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
+                NotificationsOff()
             }
         }
     }
@@ -72,8 +64,25 @@ struct TodayView: View {
     }
 }
 
+/// "Notificações desligadas" com o Ligar (Ajustes no avulso, Permissões no NeyHub).
+struct NotificationsOff: View {
+    @EnvironmentObject private var reminders: Reminders
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "bell.slash").foregroundStyle(Grafite.warn)
+            Text("Notificações desligadas, os lembretes não aparecem.").font(.callout).foregroundStyle(Grafite.warn)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 4)
+            GPill(title: "Ligar") { reminders.openSettings() }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+    }
+}
+
 /// Primeira abertura: nada vem pronto, cada um monta a sua lista.
-private struct Welcome: View {
+struct Welcome: View {
     @EnvironmentObject private var nav: Nav
 
     var body: some View {
@@ -103,11 +112,17 @@ struct ItemRow: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var nav: Nav
     let item: Item
+    /// Tela de app: coluna do horário à esquerda e "em 3 h" / "feito às" à direita.
+    var wide = false
     @ViewState private var hovering = false
 
     var body: some View {
         let status = store.status(of: item)
         HStack(spacing: 12) {
+            if wide {
+                Text(store.clock(of: item)?.label ?? "").font(.system(size: 11, design: .monospaced)).foregroundStyle(Grafite.muted)
+                    .frame(width: 40, alignment: .leading)
+            }
             check(status)
             // O nome abre a edição (frequência, dose, lembrete); quem marca é a cápsula.
             Button { nav.screen = .edit(item) } label: {
@@ -162,13 +177,7 @@ struct ItemRow: View {
         }
     }
 
-    private func take() {
-        if item.tracksSite {
-            nav.screen = .log(item.id)
-        } else {
-            store.take(item)
-        }
-    }
+    private func take() { nav.take(item, store: store) }
 
     // MARK: Textos
 
@@ -203,11 +212,14 @@ struct ItemRow: View {
             if late > 0 {
                 Text("\(late) \(late == 1 ? "dia" : "dias") de atraso").font(.callout.weight(.medium)).foregroundStyle(.red)
             } else if let next = store.nextTime(of: item, since: since) {
-                Text(next.label).font(.callout).monospacedDigit()
-                    .foregroundStyle(store.now >= next.on(since) ? Grafite.warn : Grafite.muted)
+                let due = next.on(since)
+                Text(wide ? (store.now >= due ? "desde \(next.label)" : Format.until(due, now: store.now)) : next.label)
+                    .font(.callout).monospacedDigit()
+                    .foregroundStyle(store.now >= due ? Grafite.warn : Grafite.muted)
             }
         case .done(let intake):
-            Text(Format.time(intake.date)).font(.callout).monospacedDigit().foregroundStyle(Grafite.muted)
+            Text(wide ? "feito às \(Format.time(intake.date))" : Format.time(intake.date)).font(.callout).monospacedDigit()
+                .foregroundStyle(wide ? Grafite.accent : Grafite.muted)
         case .later(let next, _):
             Text(Format.day(next, now: store.now).capitalizedFirst).font(.callout).foregroundStyle(Grafite.muted)
         case .asNeeded(let today):
@@ -289,6 +301,7 @@ struct ItemMenu: View {
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
+        .tint(Grafite.ghostText)
         .fixedSize()
         .opacity(hovering ? 1 : 0.35)
     }

@@ -6,9 +6,6 @@ struct HistoryView: View {
     @EnvironmentObject private var nav: Nav
 
     var body: some View {
-        let calendar = Calendar.current
-        let days = Dictionary(grouping: store.intakes.reversed()) { calendar.startOfDay(for: $0.date) }
-            .sorted { $0.key > $1.key }
         let streaks = store.active
             .filter { $0.schedule == .daily }
             .map { ($0, store.streak(of: $0)) }
@@ -17,7 +14,7 @@ struct HistoryView: View {
         VStack(alignment: .leading, spacing: 0) {
             Header(title: "Histórico", back: { nav.screen = .today })
             Line()
-            if days.isEmpty {
+            if store.intakes.isEmpty {
                 Text("Nada registrado ainda.")
                     .foregroundStyle(Grafite.muted)
                     .frame(maxWidth: .infinity)
@@ -39,15 +36,27 @@ struct HistoryView: View {
                                 .padding(.vertical, 3)
                             }
                         }
-                        ForEach(days, id: \.key) { day, intakes in
-                            SectionTitle(text: dayTitle(day))
-                            ForEach(intakes) { HistoryRow(intake: $0) }
-                        }
+                        HistoryDays()
                     }
                     .padding(.bottom, 8)
                 }
                 .frame(height: 400)
             }
+        }
+    }
+}
+
+/// Registros por dia, do mais novo pro mais antigo, com o apagar de cada um (popover e tela de app).
+struct HistoryDays: View {
+    @EnvironmentObject private var store: Store
+
+    var body: some View {
+        let calendar = Calendar.current
+        let days = Dictionary(grouping: store.intakes.reversed()) { calendar.startOfDay(for: $0.date) }
+            .sorted { $0.key > $1.key }
+        ForEach(days, id: \.key) { day, intakes in
+            SectionTitle(text: dayTitle(day))
+            ForEach(intakes) { HistoryRow(intake: $0) }
         }
     }
 

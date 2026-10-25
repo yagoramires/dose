@@ -55,6 +55,8 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
     /// alerta de "notificações desligadas" enquanto o sistema não responde.
     @Published private(set) var authorized = true
     private var asked = false
+    /// Desinstalado no NeyHub: nada mais consulta nem avisa.
+    private var stopped = false
     /// Abre a janelinha da barra; com id, já na tela de registrar aquele item.
     var onOpen: (UUID?) -> Void = { _ in }
     /// Hospedado: o "Ligar" vai para a tela de Permissões do NeyHub.
@@ -74,8 +76,15 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
         refreshPermission()
     }
 
+    /// Desinstalar no NeyHub: para de avisar e tira da Central os avisos do Dose que ficaram lá.
+    func stop() {
+        stopped = true
+        center.removeDelivered(store.items.map { Self.prefix + $0.id.uuidString })
+    }
+
     /// Confere a permissão (pode ter mudado nos Ajustes) e, se estiver liberada, os lembretes.
     func refreshPermission() {
+        guard !stopped else { return }
         center.authorization { status in
             DispatchQueue.main.async { [self] in
                 // Hospedado só consulta: quem pede é a tela de Permissões do NeyHub.
@@ -106,7 +115,7 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
 
     /// Chamado a cada 30 s e ao acordar o Mac.
     func check() {
-        guard authorized else { return }
+        guard authorized, !stopped else { return }
         let now = Date()
         let hour = Calendar.current.component(.hour, from: now)
         for item in store.active {
@@ -150,8 +159,14 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
         content.sound = .default
         content.categoryIdentifier = Self.prefix + (item.tracksSite ? "dose-site" : "dose")
         content.userInfo = ["item": item.id.uuidString]
-        // Mesmo identificador: o aviso novo substitui o anterior em vez de empilhar.
+        // Mesmo identificador: o aviso novo substitui o anterior em vez de empilhar. O da 0.1.0 (sem prefixo) sai.
+        center.removeDelivered([item.id.uuidString])
         center.post(UNNotificationRequest(identifier: Self.prefix + item.id.uuidString, content: content, trigger: nil))
+    }
+
+    /// Aviso da 0.1.0 que ficou na Central (avulso): o identificador era o uuid puro.
+    static func normalized(_ identifier: String) -> String {
+        UUID(uuidString: identifier) == nil ? identifier : prefix + identifier
     }
 
     /// Resposta a um aviso (`local.dose.<uuid>`), venha do próprio delegate (avulso) ou do NeyHub. Sem o prefixo não é do Dose.
@@ -180,7 +195,7 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
-        let identifier = response.notification.request.identifier, action = response.actionIdentifier
+        let identifier = Self.normalized(response.notification.request.identifier), action = response.actionIdentifier
         DispatchQueue.main.async { [self] in
             handle(identifier: identifier, action: action)
             completionHandler()

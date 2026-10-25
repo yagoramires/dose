@@ -11,6 +11,10 @@ final class DoseEntry: NSObject, NeyPlugin {
 
     func start(host: NeyHost) {
         app.onOpenPermissions = { host.openPermissions() }
+        // Opcional no contrato v1: NeyHub antigo sem showScreen fica no popover.
+        if host.responds(to: #selector(NeyHost.showScreen(id:))) {
+            app.onShowScreen = { host.showScreen?(id: "local.dose") }
+        }
         app.start()
     }
 

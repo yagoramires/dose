@@ -6,7 +6,8 @@ struct ItemsView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var nav: Nav
     @EnvironmentObject private var shell: Shell
-    @ViewState private var openAtLogin = SMAppService.mainApp.status == .enabled
+    /// Lido no onAppear e só no avulso: hospedado o SMAppService.mainApp é o NeyHub.
+    @ViewState private var openAtLogin = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -14,35 +15,14 @@ struct ItemsView: View {
                 IconButton(symbol: "plus", help: "Novo item") { nav.screen = .edit(nil) }
             }
             Line()
-            VStack(spacing: 0) {
-                ForEach(store.active) { item in
-                    Button { nav.screen = .edit(item) } label: {
-                        HStack(spacing: 10) {
-                            Circle().fill(item.tint.color).frame(width: 9, height: 9)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.dose.isEmpty ? item.title : "\(item.title), \(item.dose)")
-                                Text(item.scheduleLabel + (item.tracksSite ? ", com local" : ""))
-                                    .font(.caption).foregroundStyle(Grafite.muted)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right").font(.caption).foregroundStyle(Grafite.label)
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.vertical, 4)
+            ItemList()
             Line()
             VStack(alignment: .leading, spacing: 8) {
                 if shell.state.showsUpdate {
                     Text("Atualização pronta — entra ao sair").font(.system(size: 11)).foregroundStyle(Grafite.accent)
                 }
                 if shell.state.showsLoginItem {
-                    SwitchRow(title: "Abrir ao iniciar o Mac", isOn: $openAtLogin)
-                        .onChange(of: openAtLogin) { _, on in setOpenAtLogin(on) }
+                    SwitchRow(title: "Abrir ao iniciar o Mac", isOn: Binding(get: { openAtLogin }, set: { setOpenAtLogin($0) }))
                 }
                 HStack(spacing: 6) {
                     Chip(title: "Abrir pasta dos dados") {
@@ -55,9 +35,11 @@ struct ItemsView: View {
             }
             .padding(14)
         }
+        .onAppear { if shell.state.showsLoginItem { openAtLogin = SMAppService.mainApp.status == .enabled } }
     }
 
     private func setOpenAtLogin(_ on: Bool) {
+        openAtLogin = on
         do {
             if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
             debugLog("abrir ao iniciar: \(on)")
@@ -65,6 +47,38 @@ struct ItemsView: View {
             debugLog("abrir ao iniciar falhou: \(error)")
             openAtLogin = SMAppService.mainApp.status == .enabled
         }
+    }
+}
+
+/// Lista dos itens; na tela de app, o que está aberto ao lado fica marcado.
+struct ItemList: View {
+    @EnvironmentObject private var store: Store
+    @EnvironmentObject private var nav: Nav
+    var selected: UUID?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(store.active) { item in
+                Button { nav.screen = .edit(item) } label: {
+                    HStack(spacing: 10) {
+                        Circle().fill(item.tint.color).frame(width: 9, height: 9)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.dose.isEmpty ? item.title : "\(item.title), \(item.dose)")
+                            Text(item.scheduleLabel + (item.tracksSite ? ", com local" : ""))
+                                .font(.caption).foregroundStyle(Grafite.muted)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(Grafite.label)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(selected == item.id ? Grafite.selected : .clear)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 
@@ -209,7 +223,7 @@ struct EditView: View {
 
             HStack {
                 if !isNew {
-                    FormButton(title: "Excluir") { confirmDelete = true }
+                    FormButton(title: "Excluir", destructive: true) { confirmDelete = true }
                 }
                 Spacer()
                 FormButton(title: "Cancelar") { nav.screen = nav.origin }

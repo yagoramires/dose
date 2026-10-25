@@ -14,10 +14,13 @@ extension DoseApp {
         hostedLeavesLoginItem(folder)
         reminders(folder)
         routing(folder)
+        hostedTap(folder)
         popover(folder)
+        days(folder)
     }
 
     /// Suite temporária no lugar do `.standard`; o chamador apaga. Nome fixo: não junta um plist por rodada.
+    /// `UserDefaults(suiteName:)` direto só aqui: o app usa `AppDefaults.forApp`; o teste quer um domínio descartável.
     private static func tempDefaults() -> (UserDefaults, String) {
         let name = "dose.selftest"
         return (UserDefaults(suiteName: name)!, name)
@@ -60,13 +63,21 @@ extension DoseApp {
         let before = UserDefaults.standard.object(forKey: "loginItemOffered") as? Bool
         let center = FakeNotifier(status: .notDetermined)
         let app = DoseApp(defaults: d, hosted: true, version: "9.8.7", storeURL: folder.appendingPathComponent("login.json"), center: center)
-        app.store.upsert(dueNow())
+        let item = dueNow()
+        app.store.upsert(item)
         app.start()
         spin()
         app.stop()
         precondition(d.object(forKey: "loginItemOffered") == nil, "hospedado gravou loginItemOffered")
         precondition(UserDefaults.standard.object(forKey: "loginItemOffered") as? Bool == before, "mexeu no .standard")
         precondition(center.calls.isEmpty && center.posted.isEmpty, "\(center.calls)")
+        // Desinstalado: os avisos do Dose saem da Central e nada mais é avisado, mesmo com permissão.
+        precondition(center.removed.contains("local.dose.\(item.id)"), "\(center.removed)")
+        center.status = .authorized
+        app.reminders.refreshPermission()
+        app.reminders.check()
+        spin()
+        precondition(center.posted.isEmpty, "avisou depois do stop()")
     }
 
     /// Avulso: delegate, categorias e um pedido só. Aviso com identificador e categoria `local.dose.`.
@@ -87,6 +98,9 @@ extension DoseApp {
         spin()
         precondition(center.posted.map(\.identifier) == ["local.dose.\(item.id)"], "\(center.posted)")
         precondition(center.posted[0].content.categoryIdentifier == "local.dose.dose")
+        precondition(center.removed.contains(item.id.uuidString), "aviso da 0.1.0 ficou na Central")
+        precondition(Reminders.normalized("\(item.id)") == "local.dose.\(item.id)")
+        precondition(Reminders.normalized("local.dose.\(item.id)") == "local.dose.\(item.id)" && Reminders.normalized("x") == "x")
         precondition(Set(Reminders.categories.map(\.identifier)) == ["local.dose.dose", "local.dose.dose-site"])
         precondition(Reminders.categories.allSatisfy { !$0.actions.isEmpty })
 
@@ -126,6 +140,62 @@ extension DoseApp {
         precondition(Set(app.notificationCategories().map(\.identifier)) == Set(Reminders.categories.map(\.identifier)))
     }
 
+    /// Hospedado com `showScreen` no NeyHub: o toque leva à tela do Dose; "Escolher local…" já no registro do item.
+    static func hostedTap(_ folder: URL) {
+        let (d, name) = tempDefaults()
+        defer { d.removePersistentDomain(forName: name) }
+        let app = DoseApp(defaults: d, hosted: true, version: "9.8.7", storeURL: folder.appendingPathComponent("toque.json"),
+                          center: FakeNotifier(status: .notDetermined))
+        var item = dueNow()
+        item.tracksSite = true
+        app.store.upsert(item)
+        var shown = 0
+        app.onShowScreen = { shown += 1 }
+        app.start()
+        app.screenNav.screen = .history
+        app.handleNotification(identifier: "local.dose.\(item.id)", actionIdentifier: "pick")
+        precondition(shown == 1 && app.screenNav.screen == .log(item.id), "\(app.screenNav.screen)")
+        app.handleNotification(identifier: "local.dose.\(UUID())", actionIdentifier: UNNotificationDefaultActionIdentifier)
+        precondition(shown == 2 && app.screenNav.screen == .today)
+        // NeyHub sem showScreen: cai no popover (sem pílula, não abre nada) e não mexe na tela.
+        app.onShowScreen = nil
+        app.handleNotification(identifier: "local.dose.\(item.id)", actionIdentifier: "pick")
+        precondition(shown == 2 && app.screenNav.screen == .today)
+        app.stop()
+    }
+
+    /// Grade da tela de app (completo, parcial, esquecido) e o "em 3 h" da agenda.
+    static func days(_ folder: URL) {
+        let calendar = Calendar.current
+        let store = Store(url: folder.appendingPathComponent("grade.json"))
+        let today = calendar.startOfDay(for: store.now)
+        func day(_ n: Int, _ hour: Int = 10) -> Date { calendar.date(byAdding: .hour, value: hour, to: calendar.date(byAdding: .day, value: -n, to: today)!)! }
+        var daily = Item(name: "Duas doses", dose: "", schedule: .daily, times: [Clock(hour: 8, minute: 0), Clock(hour: 20, minute: 0)])
+        daily.created = day(5, 0)
+        store.upsert(daily)
+        store.take(daily, at: day(1, 8)); store.take(daily, at: day(1, 20))
+        store.take(daily, at: day(2, 8))
+        precondition(store.mark(of: daily, on: day(1)) == .done && store.mark(of: daily, on: day(2)) == .partial)
+        precondition(store.mark(of: daily, on: day(3)) == .missed, "dia sem dose não ficou esquecido")
+        precondition(store.mark(of: daily, on: day(0)) == .none, "hoje ainda dá tempo")
+        precondition(store.mark(of: daily, on: day(6)) == .none, "antes de criar o item")
+        let weekday = calendar.component(.weekday, from: day(3))
+        var weekly = Item(name: "Semanal", dose: "", schedule: .weekdays([weekday]), times: [Clock(hour: 9, minute: 0)])
+        weekly.created = day(30, 0)
+        store.upsert(weekly)
+        precondition(store.mark(of: weekly, on: day(3)) == .missed && store.mark(of: weekly, on: day(2)) == .none)
+        store.take(weekly, at: day(4))
+        precondition(store.mark(of: weekly, on: day(3)) == .none && store.mark(of: weekly, on: day(4)) == .done, "véspera vale")
+        var every = Item(name: "A cada 3", dose: "", schedule: .interval(days: 3))
+        every.created = day(30, 0)
+        store.upsert(every)
+        precondition(store.mark(of: every, on: day(2)) == .none)
+        let now = Date()
+        precondition(Format.until(now.addingTimeInterval(20 * 60 - 1), now: now) == "em 20 min")
+        precondition(Format.until(now.addingTimeInterval(160 * 60), now: now) == "em 3 h")
+        precondition(Format.until(now.addingTimeInterval(10), now: now) == "em 1 min")
+    }
+
     /// Hospedado: sem "Abrir ao iniciar", sem "Sair" (fecharia o NeyHub), sem Configurações… e sem linha de atualização.
     static func popover(_ folder: URL) {
         func state(hosted: Bool) -> PopoverState {
@@ -159,6 +229,7 @@ final class FakeNotifier: Notifier {
     var status: UNAuthorizationStatus
     var calls: [String] = []
     var posted: [UNNotificationRequest] = []
+    var removed: [String] = []
 
     init(status: UNAuthorizationStatus) { self.status = status }
 
@@ -167,5 +238,5 @@ final class FakeNotifier: Notifier {
     func authorization(_ done: @escaping (UNAuthorizationStatus) -> Void) { done(status) }
     func requestAuthorization(_ done: @escaping (Bool, Error?) -> Void) { calls.append("request") }
     func post(_ request: UNNotificationRequest) { posted.append(request) }
-    func removeDelivered(_ identifiers: [String]) {}
+    func removeDelivered(_ identifiers: [String]) { removed += identifiers }
 }

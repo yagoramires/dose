@@ -60,6 +60,12 @@ enum Format {
         }
     }
 
+    /// "em 20 min", "em 3 h" (arredondado), pra uma hora que ainda não chegou.
+    static func until(_ date: Date, now: Date = Date()) -> String {
+        let minutes = max(1, Int((date.timeIntervalSince(now) / 60).rounded(.up)))
+        return minutes < 60 ? "em \(minutes) min" : "em \((minutes + 30) / 60) h"
+    }
+
     /// "nunca", "hoje", "há 3 dias", "há 2 sem."
     static func ago(_ date: Date?, now: Date = Date()) -> String {
         guard let date else { return "nunca" }

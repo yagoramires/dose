@@ -12,6 +12,8 @@ public final class DoseApp: NSObject, NSPopoverDelegate {
     private let hosted: Bool
     let store: Store
     private let nav = Nav()
+    /// Navegação da tela de app, separada da do popover (as duas podem estar abertas).
+    let screenNav = Nav()
     let reminders: Reminders
     let shell: Shell
     private var statusItem: NSStatusItem?
@@ -29,6 +31,8 @@ public final class DoseApp: NSObject, NSPopoverDelegate {
         get { reminders.openPermissions }
         set { reminders.openPermissions = newValue }
     }
+    /// Hospedado: o NeyHub mostra a tela do Dose (`NeyHost.showScreen`). nil = NeyHub sem esse pedido.
+    public var onShowScreen: (() -> Void)?
     /// Avulso: o Updater já preparou uma versão, que entra quando o app fechar.
     public var updateReady = false { didSet { shell.state.updateReady = updateReady } }
 
@@ -60,7 +64,7 @@ public final class DoseApp: NSObject, NSPopoverDelegate {
             }
             .store(in: &subscriptions)
 
-        reminders.onOpen = { [weak self] id in self?.open(id.map(Screen.log) ?? .today) }
+        reminders.onOpen = { [weak self] id in self?.openFromNotification(id) }
         reminders.start()
 
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in self?.tick() }
@@ -84,6 +88,7 @@ public final class DoseApp: NSObject, NSPopoverDelegate {
         wakeObserver = nil
         subscriptions = []
         reminders.onOpen = { _ in }
+        reminders.stop()
         setMenuBarVisible(false)
         removeOutsideClicks()
         settingsWindow?.close()
@@ -107,9 +112,9 @@ public final class DoseApp: NSObject, NSPopoverDelegate {
         }
     }
 
-    // shortcut: tela provisória até o mockup da tela de app ser aprovado (Task 13 parte B).
     public func makeScreen() -> NSViewController {
-        NSHostingController(rootView: ScreenView())
+        NSHostingController(rootView: ScreenView().environmentObject(store).environmentObject(screenNav)
+            .environmentObject(reminders).environmentObject(shell))
     }
 
     public func makeSettings() -> NSViewController {
@@ -170,11 +175,23 @@ public final class DoseApp: NSObject, NSPopoverDelegate {
     }
 
     private func bringToFront(_ window: NSWindow?) {
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
         window?.makeKeyAndOrderFront(nil)
     }
 
     // MARK: Barra de menus
+
+    /// Toque no aviso: hospedado vai para a tela do Dose no NeyHub (a pílula pode estar escondida),
+    /// já no registro do item quando é escolher o local. No avulso, o popover, como sempre.
+    func openFromNotification(_ id: UUID?) {
+        let screen = id.map(Screen.log) ?? .today
+        if hosted, let onShowScreen {
+            screenNav.screen = screen
+            onShowScreen()
+        } else {
+            open(screen)
+        }
+    }
 
     private func tick() {
         store.now = Date()

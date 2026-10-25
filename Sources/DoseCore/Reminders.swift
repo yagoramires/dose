@@ -76,11 +76,9 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
         refreshPermission()
     }
 
-    /// Desinstalar no NeyHub: para de avisar e tira da Central os avisos do Dose que ficaram lá.
-    func stop() {
-        stopped = true
-        center.removeDelivered(store.items.map { Self.prefix + $0.id.uuidString })
-    }
+    /// Desinstalar no NeyHub: para de avisar. Os avisos na Central ficam: sair do NeyHub também chama stop(), e quem
+    /// tira ao desinstalar é o NeyHub.
+    func stop() { stopped = true }
 
     /// Confere a permissão (pode ter mudado nos Ajustes) e, se estiver liberada, os lembretes.
     func refreshPermission() {

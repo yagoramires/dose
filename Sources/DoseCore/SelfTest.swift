@@ -123,8 +123,8 @@ extension DoseApp {
         precondition(d.object(forKey: "loginItemOffered") == nil, "hospedado gravou loginItemOffered")
         precondition(UserDefaults.standard.object(forKey: "loginItemOffered") as? Bool == before, "mexeu no .standard")
         precondition(center.calls.isEmpty && center.posted.isEmpty, "\(center.calls)")
-        // Desinstalado: os avisos do Dose saem da Central e nada mais é avisado, mesmo com permissão.
-        precondition(center.removed.contains("local.dose.\(item.id)"), "\(center.removed)")
+        // Desinstalado: nada mais é avisado, mesmo com permissão. Os avisos na Central quem tira é o NeyHub (sair também chama stop()).
+        precondition(center.removed.isEmpty, "stop() tirou avisos da Central: \(center.removed)")
         center.status = .authorized
         app.reminders.refreshPermission()
         app.reminders.check()

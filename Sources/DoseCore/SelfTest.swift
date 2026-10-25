@@ -152,15 +152,27 @@ extension DoseApp {
         var shown = 0
         app.onShowScreen = { shown += 1 }
         app.start()
+        Presence(screen: true, menuBar: false).save(d)
         app.screenNav.screen = .history
         app.handleNotification(identifier: "local.dose.\(item.id)", actionIdentifier: "pick")
         precondition(shown == 1 && app.screenNav.screen == .log(item.id), "\(app.screenNav.screen)")
         app.handleNotification(identifier: "local.dose.\(UUID())", actionIdentifier: UNNotificationDefaultActionIdentifier)
         precondition(shown == 2 && app.screenNav.screen == .today)
-        // NeyHub sem showScreen: cai no popover (sem pílula, não abre nada) e não mexe na tela.
-        app.onShowScreen = nil
+        // Só barra de menus (a escolha no NeyHub): o popover, já no registro do item; a tela não muda.
+        Presence(screen: false, menuBar: true).save(d)
         app.handleNotification(identifier: "local.dose.\(item.id)", actionIdentifier: "pick")
-        precondition(shown == 2 && app.screenNav.screen == .today)
+        precondition(shown == 2 && app.screenNav.screen == .today && app.nav.screen == .log(item.id), "\(app.nav.screen)")
+        // Os dois desligados: o NeyHub normaliza para barra de menus (a pílula aparece), então também é o popover.
+        Presence(screen: false, menuBar: false).save(d)
+        app.nav.screen = .today
+        app.handleNotification(identifier: "local.dose.\(item.id)", actionIdentifier: "pick")
+        precondition(shown == 2 && app.nav.screen == .log(item.id))
+        // NeyHub sem showScreen: cai no popover e não mexe na tela.
+        Presence(screen: true, menuBar: true).save(d)
+        app.onShowScreen = nil
+        app.nav.screen = .today
+        app.handleNotification(identifier: "local.dose.\(item.id)", actionIdentifier: "pick")
+        precondition(shown == 2 && app.screenNav.screen == .today && app.nav.screen == .log(item.id))
         app.stop()
     }
 

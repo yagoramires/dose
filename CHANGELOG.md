@@ -8,7 +8,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 - Instalação pelo NeyHub (`Dose-0.2.0.neyplugin`): o Dose roda dentro dele, com os mesmos dados, e os lembretes chegam como NeyHub.
 - Instalador `.dmg` e atualização automática no avulso: baixa sozinho e troca o app quando você fecha o Dose, com a janela **Novidades** na abertura seguinte.
 - Tela do Dose (modo Janela no avulso e tela dentro do NeyHub): abas Hoje (agenda do dia, quando precisar, contadores e últimos 7 dias), Histórico (14 dias por item, sequência, rodízio de local e registros) e Itens (lista com o formulário ao lado).
-- Dentro do NeyHub, tocar num lembrete abre a tela do Dose (em "Escolher local…", já no registro do item).
+- Dentro do NeyHub, tocar num lembrete abre a tela do Dose (em "Escolher local…", já no registro do item); com o Dose só na barra de menus, abre o popover.
 - Configurações (em **Itens e ajustes → Configurações…**): onde o Dose aparece (janela com ícone no Dock, barra de menus ou os dois, sem reiniciar) e o estado das notificações.
 
 ### Alterado

@@ -11,7 +11,8 @@ public final class DoseApp: NSObject, NSPopoverDelegate {
     /// Dentro do NeyHub: sem item de login, sem "Sair" e sem pedir notificações.
     private let hosted: Bool
     let store: Store
-    private let nav = Nav()
+    /// Navegação do popover (o selftest confere para onde o toque no aviso levou).
+    let nav = Nav()
     /// Navegação da tela de app, separada da do popover (as duas podem estar abertas).
     let screenNav = Nav()
     let reminders: Reminders
@@ -181,11 +182,13 @@ public final class DoseApp: NSObject, NSPopoverDelegate {
 
     // MARK: Barra de menus
 
-    /// Toque no aviso: hospedado vai para a tela do Dose no NeyHub (a pílula pode estar escondida),
-    /// já no registro do item quando é escolher o local. No avulso, o popover, como sempre.
+    /// Toque no aviso: hospedado com tela, vai para a tela do Dose no NeyHub, já no registro do item quando é
+    /// escolher o local. Só barra de menus (ou no avulso), o popover, como sempre. A presença é a que o NeyHub
+    /// aplica: mesmo domínio (`AppDefaults.forApp("local.dose")` = `defaults`), mesma leitura e normalização.
+    /// Por causa do `normalized`, "nada visível" não existe: sem tela, a pílula está na barra.
     func openFromNotification(_ id: UUID?) {
         let screen = id.map(Screen.log) ?? .today
-        if hosted, let onShowScreen {
+        if hosted, let onShowScreen, Presence.load(defaults, hasScreen: true).normalized(hasScreen: true).screen {
             screenNav.screen = screen
             onShowScreen()
         } else {

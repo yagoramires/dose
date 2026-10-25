@@ -16,7 +16,7 @@ Requer macOS 14 ou mais novo. Roda nativo em Apple Silicon e Intel. Também dá 
 
 ### Pelo NeyHub
 
-Quem usa o [NeyHub](https://github.com/yagoramires/neyhub) pode instalar o Dose pela Loja dele (o `Dose-x.y.z.neyplugin` do release). Aí o Dose roda dentro do NeyHub, com os mesmos dados do avulso (`dados.json`): a pílula e o popover são os mesmos, os lembretes chegam como NeyHub (a permissão de notificações é do NeyHub, pela tela **Permissões**), tocar num lembrete abre a tela do Dose na janela do NeyHub (em **Escolher local…**, já no registro do item), o NeyHub cuida do login, das atualizações e de mostrar ou esconder a pílula, e o popover não tem **Abrir ao iniciar o Mac**, **Configurações…**, **Sair do Dose** nem a linha **Atualização pronta**. Feche o Dose avulso antes: se o NeyHub já roda o Dose, o avulso avisa (um aviso só), sai dos itens de login e fecha.
+Quem usa o [NeyHub](https://github.com/yagoramires/neyhub) pode instalar o Dose pela Loja dele (o `Dose-x.y.z.neyplugin` do release). Aí o Dose roda dentro do NeyHub, com os mesmos dados do avulso (`dados.json`): a pílula e o popover são os mesmos, os lembretes chegam como NeyHub (a permissão de notificações é do NeyHub, pela tela **Permissões**), tocar num lembrete abre a tela do Dose na janela do NeyHub (em **Escolher local…**, já no registro do item; com o Dose só na barra de menus, abre o popover, como no avulso), o NeyHub cuida do login, das atualizações e de mostrar ou esconder a pílula, e o popover não tem **Abrir ao iniciar o Mac**, **Configurações…**, **Sair do Dose** nem a linha **Atualização pronta**. Feche o Dose avulso antes: se o NeyHub já roda o Dose, o avulso avisa (um aviso só), sai dos itens de login e fecha.
 
 ### Desinstalar
 

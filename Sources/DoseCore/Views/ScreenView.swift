@@ -324,7 +324,8 @@ struct DayGrid: View {
                 HStack(spacing: 3) {
                     HStack(spacing: 4) {
                         Text(item.name).lineLimit(1)
-                        if streaks, item.schedule == .daily, case let streak = store.streak(of: item), streak > 0 {
+                        // Mesmo corte do popover ("Sequências"): só a partir de 2 dias.
+                        if streaks, item.schedule == .daily, case let streak = store.streak(of: item), streak > 1 {
                             Text("\(streak)").fontWeight(.bold).foregroundStyle(Grafite.accent)
                         }
                     }

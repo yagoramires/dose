@@ -1,9 +1,11 @@
+import NeyKit
 import ServiceManagement
 import SwiftUI
 
 struct ItemsView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var nav: Nav
+    @EnvironmentObject private var shell: Shell
     @ViewState private var openAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
@@ -11,7 +13,7 @@ struct ItemsView: View {
             Header(title: "Itens", back: { nav.screen = .today }) {
                 IconButton(symbol: "plus", help: "Novo item") { nav.screen = .edit(nil) }
             }
-            Divider()
+            Line()
             VStack(spacing: 0) {
                 ForEach(store.active) { item in
                     Button { nav.screen = .edit(item) } label: {
@@ -20,10 +22,10 @@ struct ItemsView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.dose.isEmpty ? item.title : "\(item.title), \(item.dose)")
                                 Text(item.scheduleLabel + (item.tracksSite ? ", com local" : ""))
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(.caption).foregroundStyle(Grafite.muted)
                             }
                             Spacer()
-                            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+                            Image(systemName: "chevron.right").font(.caption).foregroundStyle(Grafite.label)
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
@@ -33,16 +35,22 @@ struct ItemsView: View {
                 }
             }
             .padding(.vertical, 4)
-            Divider()
+            Line()
             VStack(alignment: .leading, spacing: 8) {
-                Toggle("Abrir ao iniciar o Mac", isOn: $openAtLogin)
-                    .onChange(of: openAtLogin) { _, on in setOpenAtLogin(on) }
-                HStack {
-                    Button("Abrir pasta dos dados") {
+                if shell.state.showsUpdate {
+                    Text("Atualização pronta — entra ao sair").font(.system(size: 11)).foregroundStyle(Grafite.accent)
+                }
+                if shell.state.showsLoginItem {
+                    SwitchRow(title: "Abrir ao iniciar o Mac", isOn: $openAtLogin)
+                        .onChange(of: openAtLogin) { _, on in setOpenAtLogin(on) }
+                }
+                HStack(spacing: 6) {
+                    Chip(title: "Abrir pasta dos dados") {
                         NSWorkspace.shared.activateFileViewerSelecting([Store.defaultURL])
                     }
+                    if shell.state.showsSettings { Chip(title: "Configurações…") { shell.showSettings() } }
                     Spacer()
-                    Button("Sair do Dose") { NSApp.terminate(nil) }
+                    if shell.state.showsQuit { Chip(title: "Sair do Dose") { NSApp.terminate(nil) } }
                 }
             }
             .padding(14)
@@ -78,7 +86,7 @@ struct EditView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Header(title: isNew ? "Novo item" : draft.title, back: { nav.screen = nav.origin })
-            Divider()
+            Line()
             Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 10) {
                 GridRow {
                     label(isCounter ? "Dias sem" : "Nome")
@@ -120,8 +128,8 @@ struct EditView: View {
                                     Text(Format.weekdays[day - 1].prefix(1).uppercased())
                                         .font(.callout.weight(.semibold))
                                         .frame(width: 26, height: 26)
-                                        .foregroundStyle(on ? Color.white : Color.primary)
-                                        .background(Circle().fill(on ? draft.tint.color : Color.primary.opacity(0.07)))
+                                        .foregroundStyle(on ? Color.white : Grafite.text)
+                                        .background(Circle().fill(on ? draft.tint.color : Grafite.card))
                                         .contentShape(Circle())
                                 }
                                 .buttonStyle(.plain)
@@ -154,7 +162,7 @@ struct EditView: View {
                                     .help("Tirar esse horário")
                                     if index == 0 {
                                         Text(draft.times.count == 1 ? "1 dose por dia" : "\(draft.times.count) doses por dia")
-                                            .font(.caption).foregroundStyle(.secondary)
+                                            .font(.caption).foregroundStyle(Grafite.muted)
                                     }
                                 }
                             }
@@ -164,12 +172,13 @@ struct EditView: View {
                                 draft.times.append(Clock(hour: min(23, last.hour + 3), minute: last.minute))
                             } label: {
                                 Label(draft.times.isEmpty ? "Adicionar horário" : "Outra dose no dia", systemImage: "plus")
+                                    .foregroundStyle(Grafite.accent)
                             }
                             .buttonStyle(.borderless)
                             if draft.times.isEmpty {
-                                Text("Sem horário: 1 dose por dia, sem aviso.").font(.caption).foregroundStyle(.secondary)
+                                Text("Sem horário: 1 dose por dia, sem aviso.").font(.caption).foregroundStyle(Grafite.muted)
                             } else {
-                                Toggle("Avisar nesses horários", isOn: $draft.remind)
+                                SwitchRow(title: "Avisar nesses horários", isOn: $draft.remind)
                             }
                         }
                     }
@@ -177,7 +186,7 @@ struct EditView: View {
                 if !isCounter {
                     GridRow {
                         label("Local")
-                        Toggle("Pedir o local da aplicação", isOn: $draft.tracksSite)
+                        SwitchRow(title: "Pedir o local da aplicação", isOn: $draft.tracksSite)
                     }
                 }
                 GridRow {
@@ -200,11 +209,11 @@ struct EditView: View {
 
             HStack {
                 if !isNew {
-                    Button("Excluir", role: .destructive) { confirmDelete = true }
+                    FormButton(title: "Excluir") { confirmDelete = true }
                 }
                 Spacer()
-                Button("Cancelar") { nav.screen = nav.origin }
-                Button("Salvar") {
+                FormButton(title: "Cancelar") { nav.screen = nav.origin }
+                FormButton(title: "Salvar", style: .primary) {
                     draft.name = draft.name.trimmingCharacters(in: .whitespaces)
                     draft.dose = draft.dose.trimmingCharacters(in: .whitespaces)
                     draft.times = Array(Set(draft.times)).sorted()
@@ -232,7 +241,7 @@ struct EditView: View {
     }
 
     private func label(_ text: String) -> some View {
-        Text(text).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+        Text(text).foregroundStyle(Grafite.muted).gridColumnAlignment(.trailing)
     }
 
     // MARK: Bindings que traduzem o formulário pro modelo

@@ -1,0 +1,7 @@
+{
+  "id": "local.dose",
+  "name": "Dose",
+  "hasScreen": true,
+  "permissions": ["notifications"],
+  "binary": "libDosePlugin.dylib"
+}

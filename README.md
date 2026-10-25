@@ -8,14 +8,30 @@ O print usa itens de exemplo.
 
 ## Instalar
 
-Hoje a instalação é por build local (veja **Build local**): rode `scripts/setup-signing.sh` uma vez e depois `scripts/build.sh --run`.
+1. Baixe o `Dose-x.y.z.dmg` (ou o `.zip`) na [página de releases](https://github.com/yagoramires/dose/releases/latest) e arraste o **Dose.app** pra pasta **Aplicativos**.
+2. Abra o Dose. Como ele não é assinado com um certificado pago da Apple, na primeira vez o macOS avisa que não conseguiu verificar o desenvolvedor. Clique com o botão direito no app → **Abrir**, ou vá em **Ajustes do Sistema → Privacidade e Segurança**, role até o fim e clique em **Abrir Mesmo Assim**. Pelo Terminal também resolve: `xattr -dr com.apple.quarantine /Applications/Dose.app`
+3. Permita as notificações quando o macOS pedir (veja **Permissões**). Na primeira abertura o Dose entra sozinho nos itens de início, porque os lembretes só chegam com ele aberto.
 
-Instalador `.dmg` e instalação pelo NeyHub chegam na próxima versão.
+Requer macOS 14 ou mais novo. Roda nativo em Apple Silicon e Intel. Também dá pra compilar do código (veja **Build local**).
+
+### Pelo NeyHub
+
+Quem usa o [NeyHub](https://github.com/yagoramires/neyhub) pode instalar o Dose pela Loja dele (o `Dose-x.y.z.neyplugin` do release). Aí o Dose roda dentro do NeyHub, com os mesmos dados do avulso (`dados.json`): a pílula e o popover são os mesmos, os lembretes chegam como NeyHub (a permissão de notificações é do NeyHub, pela tela **Permissões**), o NeyHub cuida do login, das atualizações e de mostrar ou esconder a pílula, e o popover não tem **Abrir ao iniciar o Mac**, **Configurações…**, **Sair do Dose** nem a linha **Atualização pronta**. Feche o Dose avulso antes: se o NeyHub já roda o Dose, o avulso avisa (um aviso só), sai dos itens de login e fecha.
+
+### Desinstalar
+
+1. Em **Itens e ajustes** (a engrenagem), desligue **Abrir ao iniciar o Mac** e clique em **Sair do Dose**.
+2. Apague o **Dose.app** de Aplicativos. Pelo NeyHub, é só desinstalar no card do Dose: os lembretes param na hora.
+3. Os dados continuam em `~/Library/Application Support/Dose/`. Pra apagar tudo (sem volta): `rm -rf ~/Library/Application\ Support/Dose ~/Library/Logs/Dose; defaults delete local.dose`
 
 ## Permissões
 
-- **Notificações**: para os lembretes (alerta e som). O macOS pede na primeira vez.
-- Não pede Acessibilidade, Gravação de Tela, Câmera nem Microfone, e não usa a rede.
+- **Notificações**: para os lembretes (alerta e som). O macOS pede na primeira vez. Dentro do NeyHub a permissão é do NeyHub e se dá pela tela **Permissões** dele; o **Ligar** do aviso "Notificações desligadas" leva pra lá.
+- Não pede Acessibilidade, Gravação de Tela, Câmera nem Microfone.
+
+### Privacidade
+
+Seus remédios, doses e contadores ficam só no seu Mac, em `~/Library/Application Support/Dose/dados.json`. A única conexão de rede é a consulta à API pública do GitHub (`api.github.com`) pra saber se tem versão nova, e o download dela. O log de depuração (`~/Library/Logs/Dose/dose.log`) também fica só no seu Mac.
 
 ## Como usar
 
@@ -33,33 +49,78 @@ Clique na pílula na barra de menus.
 - **Lembretes**: no horário marcado, só se ainda não tomou. Insiste a cada 2 h (das 7 h às 23 h) até marcar. Dá pra marcar "Tomei" ou adiar 30 min direto na notificação.
 - A pílula na barra mostra quantos itens ainda faltam hoje.
 - Histórico com tudo o que foi registrado, dá pra apagar um registro errado ou registrar com outro horário.
+- **Itens e ajustes** (a engrenagem): lista dos itens, **Abrir ao iniciar o Mac**, **Abrir pasta dos dados**, **Configurações…** e **Sair do Dose**. Quando uma versão nova já foi baixada, aparece **Atualização pronta — entra ao sair**.
 
-Os dados ficam em `~/Library/Application Support/Dose/dados.json` e o log em `~/Library/Logs/Dose/dose.log`.
+Os dados ficam em `~/Library/Application Support/Dose/dados.json` (o mesmo arquivo no avulso e no NeyHub) e o log em `~/Library/Logs/Dose/dose.log`.
 
 ## Atalhos
 
-O Dose não tem atalho global. Nos formulários, Return confirma e Esc cancela.
+O Dose não tem atalho global. Nos formulários, Return confirma e Esc cancela. No modo **Janela**, `⌘,` abre as configurações e `⌘Q` fecha o Dose.
 
 ## Modos de exibição
 
-A pílula na barra mostra quantos itens ainda faltam hoje. A interface segue o claro ou escuro do macOS. Cada item tem uma cor de cápsula, escolhida na edição.
+O visual é o tema Grafite (escuro, com acento verde-limão), o mesmo do NeyHub. A pílula na barra mostra quantos itens ainda faltam hoje. Cada item tem uma cor de cápsula, escolhida na edição.
+
+Em **Itens e ajustes → Configurações…** você escolhe onde o Dose aparece, e a troca vale na hora:
+
+- **Barra de menus** (o padrão, como na 0.1.0): só a pílula.
+- **Janela**: ícone no Dock e a tela do Dose. Clicar no ícone do Dock traz a janela de volta; o menu **Dose → Configurações…** (`⌘,`) abre as configurações.
+- **Os dois**.
+
+Desligar os dois não vale: o outro volta a ligar. Os lembretes chegam em qualquer modo, enquanto o Dose estiver aberto. Dentro do NeyHub o modo é escolhido no card do Dose, na Loja.
 
 ## Atualizações
 
-O Dose ainda não se atualiza sozinho: para atualizar, baixe o código novo e rode o build de novo (veja **Build local**).
+Desde a 0.2.0, o Dose confere 5 s depois de abrir e a cada 6 h se tem versão nova, baixa sozinho e só troca o app quando você fecha o Dose: nunca reinicia no meio do uso. Na próxima abertura, mostra uma vez a janela **Novidades** com o que mudou. A versão baixada só é instalada se tiver sido assinada pelo mesmo certificado do app em uso, então a permissão de notificações continua valendo. Dentro do NeyHub, quem atualiza é o NeyHub.
+
+Quem está na 0.1.0 precisa instalar a 0.2.0 uma vez à mão (ela ainda não tinha atualização automática). Os dados ficam onde estão.
 
 ## Build local
 
-Precisa só das Command Line Tools (sem Xcode).
+### Compilar
+
+Só precisa das Command Line Tools (`xcode-select --install`), não do Xcode.
 
 ```sh
-scripts/setup-signing.sh   # uma vez: certificado local de assinatura
-scripts/build.sh --run     # compila, assina e abre build/Dose.app
+git clone https://github.com/yagoramires/dose.git && cd dose
+scripts/setup-signing.sh   # uma vez: certificado local de assinatura (veja abaixo)
+scripts/build.sh --run     # gera build/Dose.app e abre (fecha o Dose aberto antes)
+scripts/selftest.sh        # testes; imprime "selftest ok"
 ```
+
+O NeyKit (tema Grafite, `@ViewState`, contrato de plugin) e o NeyKitApp (atualização, novidades) vêm do checkout do
+[neyhub](https://github.com/yagoramires/neyhub) ao lado (`../neyhub`); para outro lugar, defina `NEYHUB_PATH`.
+
+O `setup-signing.sh` cria um certificado de assinatura local ("Aero Local Signing", o mesmo do Aero) no seu Chaveiro. A permissão de notificações e o item de login ficam presos à assinatura do app: com assinatura ad-hoc ela muda a cada build e o macOS para de confiar no app. Sem o certificado o build falha: o NeyHub só carrega plugins e as atualizações só entram com essa assinatura.
 
 `build/Dose.app/Contents/MacOS/Dose --snapshots <pasta>` desenha cada tela em PNG com dados de exemplo, sem tocar nos dados de verdade.
 
-> O SDK atual transformou `@State` num macro cujo plugin só vem com o Xcode; as telas usam `@ViewState` (em `Views/Root.swift`), que faz a mesma coisa.
+> O SDK atual transformou `@State` num macro cujo plugin só vem com o Xcode; as telas usam o `@ViewState` do NeyKit, que faz a mesma coisa.
+
+### Como funciona
+
+O miolo fica em `Sources/DoseCore` e é o mesmo no app avulso e no plugin do NeyHub:
+
+| Arquivo | Papel |
+| --- | --- |
+| `DoseApp.swift` | Pílula e popover da barra, modos de exibição, configurações e `stop()` (desinstalar no NeyHub). Recebe os `UserDefaults`, se está hospedado e a versão. |
+| `Store.swift`, `Model.swift` | Itens e doses em `~/Library/Application Support/Dose/dados.json`. |
+| `Reminders.swift` | Lembretes. Avisos e categorias com o prefixo `local.dose.`, que o NeyHub usa pra entregar a resposta ao Dose. Dentro do NeyHub não pede a permissão nem vira delegate das notificações (é o NeyHub que faz). |
+| `Views/` | O popover, em SwiftUI no tema Grafite do NeyKit. `ScreenView.swift` é o lugar da tela de app (ainda provisória). |
+| `SettingsView.swift` | Configurações (janela do avulso e card no NeyHub). |
+| `Log.swift`, `Format.swift` | Log de depuração com rotação e formatação de datas. |
+| `SelfTest.swift` | `--selftest` (rode com `scripts/selftest.sh`). Usa arquivo temporário e um centro de notificações falso. |
+| `Snapshots.swift` | `Dose --snapshots <pasta>`. |
+
+As cascas: `Sources/Dose` (app avulso: confere se o NeyHub já roda o Dose, atualização e novidades do NeyKitApp) e `Sources/DosePlugin` (o `libDosePlugin.dylib` que o NeyHub carrega; linka só o NeyKit). O `Info.plist` declara `NeyHubAware = true` porque o avulso chama `HubCheck.leaveForHub` ao abrir: com essa chave o NeyHub não mostra o alerta dele quando o avulso abre (só declare em app que faz essa checagem).
+
+### Publicar uma versão
+
+1. Suba a versão em `Resources/Info.plist` (`CFBundleShortVersionString` e `CFBundleVersion`) e escreva a seção `## [x.y.z]` do `CHANGELOG.md` (vira a nota do release e a janela Novidades).
+2. `scripts/release.sh` gera em `dist/` o `Dose-x.y.z.dmg`, o `Dose-x.y.z.zip` (o app, que a atualização automática baixa) e o `Dose-x.y.z.neyplugin` (o plugin do NeyHub). Só empacota.
+3. Commit, push e `NEYHUB_CONFIRM_PUBLISH=yes scripts/release.sh --publish` para criar o release.
+
+O release **precisa ser assinado com o mesmo certificado** das versões anteriores, senão os apps já instalados recusam a atualização automática.
 
 ## Patch notes
 

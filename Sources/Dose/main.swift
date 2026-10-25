@@ -1,11 +1,19 @@
 import AppKit
+import DoseCore
+import NeyKit
+
+let arguments = CommandLine.arguments
+if arguments.contains("--selftest") {
+    NeyKitSelfTest.run()
+    DoseApp.selfTest()
+    print("selftest ok")
+    exit(0)
+}
 
 let app = NSApplication.shared
-let arguments = CommandLine.arguments
 if let flag = arguments.firstIndex(of: "--snapshots"), arguments.indices.contains(flag + 1) {
     app.setActivationPolicy(.prohibited)
-    Log.enabled = false
-    Snapshots.run(into: URL(fileURLWithPath: arguments[flag + 1]))
+    DoseApp.runSnapshots(into: URL(fileURLWithPath: arguments[flag + 1]))
     exit(0)
 }
 let delegate = AppDelegate()

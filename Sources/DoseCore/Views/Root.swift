@@ -1,3 +1,4 @@
+import NeyKit
 import SwiftUI
 
 enum Screen: Equatable {
@@ -36,6 +37,8 @@ struct RootView: View {
             }
         }
         .frame(width: 340)
+        .tint(Grafite.accent)
+        .grafiteWindow()
     }
 }
 
@@ -51,7 +54,7 @@ struct Header<Trailing: View>: View {
         HStack(spacing: 8) {
             if let back {
                 Button(action: back) {
-                    Image(systemName: "chevron.left").font(.body.weight(.semibold))
+                    Image(systemName: "chevron.left").font(.body.weight(.semibold)).foregroundStyle(Grafite.ghostText)
                         .frame(width: 22, height: 22).contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
@@ -59,9 +62,9 @@ struct Header<Trailing: View>: View {
                 .help("Voltar")
             }
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.headline)
+                Text(title).font(.system(size: 13, weight: .bold)).foregroundStyle(Grafite.strong)
                 if let subtitle {
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                    Text(subtitle).font(.system(size: 11)).foregroundStyle(Grafite.muted)
                 }
             }
             Spacer(minLength: 0)
@@ -85,7 +88,7 @@ struct IconButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: symbol).frame(width: 24, height: 24).contentShape(Rectangle())
+            Image(systemName: symbol).foregroundStyle(Grafite.ghostText).frame(width: 24, height: 24).contentShape(Rectangle())
         }
         .buttonStyle(.borderless)
         .help(help)
@@ -96,13 +99,65 @@ struct SectionTitle: View {
     let text: String
 
     var body: some View {
-        Text(text)
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.secondary)
+        GSectionLabel(text)
             .padding(.horizontal, 14)
             .padding(.top, 10)
             .padding(.bottom, 2)
     }
+}
+
+/// Divisória no tom da borda do Grafite (o Divider do sistema some no fundo escuro).
+struct Line: View {
+    var body: some View { Rectangle().fill(Grafite.border).frame(height: 1) }
+}
+
+/// Botão discreto do rodapé, o mesmo do Aero.
+struct Chip: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title).font(.system(size: 10)).foregroundStyle(Grafite.muted).fixedSize()
+                .padding(.horizontal, 8).padding(.vertical, 4)
+                .background(Grafite.card, in: RoundedRectangle(cornerRadius: 6))
+                .contentShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Botões dos formulários: GPill com o apagado de quando não dá pra confirmar.
+struct FormButton: View {
+    @Environment(\.isEnabled) private var enabled
+    let title: String
+    var style: GPill.Style = .ghost
+    let action: () -> Void
+
+    var body: some View {
+        GPill(title: title, style: style, action: action).opacity(enabled ? 1 : 0.4)
+    }
+}
+
+/// Texto à esquerda e interruptor do Grafite à direita.
+struct SwitchRow: View {
+    let title: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Spacer(minLength: 8)
+            GSwitch(isOn: $isOn, label: title)
+        }
+    }
+}
+
+extension Grafite {
+    // O Grafite não tem cor de alerta; as mesmas do Aero (mockup aprovado).
+    static let warn = color(hex: "#ffb03d") ?? .orange
+    static let warnBg = color(hex: "#2a2110") ?? .clear
+    static let warnBorder = color(hex: "#5a4416") ?? .clear
 }
 
 extension Tint {
@@ -126,22 +181,4 @@ extension Tint {
 extension String {
     /// "quinta-feira, 22 de outubro" → "Quinta-feira, 22 de outubro"
     var capitalizedFirst: String { prefix(1).uppercased() + dropFirst() }
-}
-
-/// O mesmo que @State. No SDK atual @State virou macro, e o plugin dele só vem com o Xcode;
-/// como o build usa só as CommandLineTools, embrulhamos o State à mão.
-@propertyWrapper
-struct ViewState<Value>: DynamicProperty {
-    private var state: State<Value>
-
-    init(wrappedValue: Value) {
-        state = State(initialValue: wrappedValue)
-    }
-
-    var wrappedValue: Value {
-        get { state.wrappedValue }
-        nonmutating set { state.wrappedValue = newValue }
-    }
-
-    var projectedValue: Binding<Value> { state.projectedValue }
 }

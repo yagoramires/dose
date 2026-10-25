@@ -1,3 +1,4 @@
+import NeyKit
 import SwiftUI
 
 struct TodayView: View {
@@ -19,7 +20,7 @@ struct TodayView: View {
                 IconButton(symbol: "clock.arrow.circlepath", help: "Histórico") { nav.screen = .history }
                 IconButton(symbol: "gearshape", help: "Itens e ajustes") { nav.screen = .items }
             }
-            Divider()
+            Line()
 
             if store.active.isEmpty {
                 Welcome()
@@ -31,7 +32,7 @@ struct TodayView: View {
                 .padding(.vertical, 6)
             }
             if !asNeeded.isEmpty {
-                if !ordered.isEmpty { Divider() }
+                if !ordered.isEmpty { Line() }
                 SectionTitle(text: "Quando precisar")
                 VStack(spacing: 0) {
                     ForEach(asNeeded) { ItemRow(item: $0) }
@@ -39,17 +40,17 @@ struct TodayView: View {
                 .padding(.bottom, 6)
             }
             if !store.active.isEmpty {
-                if !ordered.isEmpty || !asNeeded.isEmpty { Divider() }
+                if !ordered.isEmpty || !asNeeded.isEmpty { Line() }
                 CounterSection()
             }
             if !reminders.authorized {
-                Divider()
+                Line()
                 HStack(spacing: 8) {
-                    Image(systemName: "bell.slash").foregroundStyle(.orange)
-                    Text("Notificações desligadas, os lembretes não aparecem.").font(.callout)
+                    Image(systemName: "bell.slash").foregroundStyle(Grafite.warn)
+                    Text("Notificações desligadas, os lembretes não aparecem.").font(.callout).foregroundStyle(Grafite.warn)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 4)
-                    Button("Ligar") { reminders.openSettings() }
+                    GPill(title: "Ligar") { reminders.openSettings() }
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
@@ -78,14 +79,14 @@ private struct Welcome: View {
     var body: some View {
         VStack(spacing: 10) {
             PillMark(tint: Tint.teal.color, style: .todo).scaleEffect(1.6).padding(.vertical, 8)
-            Text("O que você toma?").font(.title3.weight(.semibold))
+            Text("O que você toma?").font(.title3.weight(.semibold)).foregroundStyle(Grafite.strong)
             Text("Adicione cada remédio ou suplemento com a frequência e os horários dele. Também dá pra contar dias sem alguma coisa.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(Grafite.muted)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             HStack {
-                Button("Novo contador") { nav.screen = .newCounter }
-                Button("Adicionar item") { nav.screen = .edit(nil) }
+                FormButton(title: "Novo contador") { nav.screen = .newCounter }
+                FormButton(title: "Adicionar item", style: .primary) { nav.screen = .edit(nil) }
                     .keyboardShortcut(.defaultAction)
             }
             .padding(.top, 4)
@@ -114,11 +115,11 @@ struct ItemRow: View {
                     HStack(alignment: .firstTextBaseline, spacing: 5) {
                         Text(item.name).fontWeight(.medium)
                         if !item.dose.isEmpty {
-                            Text(item.dose).font(.callout).foregroundStyle(.secondary)
+                            Text(item.dose).font(.callout).foregroundStyle(Grafite.muted)
                         }
                     }
                     if let detail = detail(status) {
-                        Text(detail).font(.caption).foregroundStyle(.secondary)
+                        Text(detail).font(.caption).foregroundStyle(Grafite.muted)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -131,7 +132,7 @@ struct ItemRow: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 6)
-        .background(hovering ? Color.primary.opacity(0.05) : .clear)
+        .background(hovering ? Grafite.selected : .clear)
         .onHover { hovering = $0 }
     }
 
@@ -203,15 +204,15 @@ struct ItemRow: View {
                 Text("\(late) \(late == 1 ? "dia" : "dias") de atraso").font(.callout.weight(.medium)).foregroundStyle(.red)
             } else if let next = store.nextTime(of: item, since: since) {
                 Text(next.label).font(.callout).monospacedDigit()
-                    .foregroundStyle(store.now >= next.on(since) ? Color.orange : Color.secondary)
+                    .foregroundStyle(store.now >= next.on(since) ? Grafite.warn : Grafite.muted)
             }
         case .done(let intake):
-            Text(Format.time(intake.date)).font(.callout).monospacedDigit().foregroundStyle(.secondary)
+            Text(Format.time(intake.date)).font(.callout).monospacedDigit().foregroundStyle(Grafite.muted)
         case .later(let next, _):
-            Text(Format.day(next, now: store.now).capitalizedFirst).font(.callout).foregroundStyle(.secondary)
+            Text(Format.day(next, now: store.now).capitalizedFirst).font(.callout).foregroundStyle(Grafite.muted)
         case .asNeeded(let today):
             if !today.isEmpty {
-                Text("\(today.count)× hoje").font(.callout).monospacedDigit().foregroundStyle(.secondary)
+                Text("\(today.count)× hoje").font(.callout).monospacedDigit().foregroundStyle(Grafite.muted)
             }
         case .counter:
             EmptyView()
@@ -284,7 +285,7 @@ struct ItemMenu: View {
             Divider()
             Button("Editar…") { nav.screen = .edit(item) }
         } label: {
-            Image(systemName: "ellipsis")
+            Image(systemName: "ellipsis").foregroundStyle(Grafite.ghostText)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)

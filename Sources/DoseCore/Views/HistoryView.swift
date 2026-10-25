@@ -1,3 +1,4 @@
+import NeyKit
 import SwiftUI
 
 struct HistoryView: View {
@@ -15,10 +16,10 @@ struct HistoryView: View {
 
         VStack(alignment: .leading, spacing: 0) {
             Header(title: "Histórico", back: { nav.screen = .today })
-            Divider()
+            Line()
             if days.isEmpty {
                 Text("Nada registrado ainda.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Grafite.muted)
                     .frame(maxWidth: .infinity)
                     .padding(24)
             } else {
@@ -31,7 +32,7 @@ struct HistoryView: View {
                                     Circle().fill(item.tint.color).frame(width: 7, height: 7)
                                     Text(item.name)
                                     Spacer()
-                                    Text("\(streak) dias seguidos").monospacedDigit().foregroundStyle(.secondary)
+                                    Text("\(streak) dias seguidos").monospacedDigit().foregroundStyle(Grafite.muted)
                                 }
                                 .font(.callout)
                                 .padding(.horizontal, 14)
@@ -64,16 +65,16 @@ private struct HistoryRow: View {
     var body: some View {
         let item = store.item(intake.itemID)
         HStack(spacing: 8) {
-            Text(Format.time(intake.date)).monospacedDigit().foregroundStyle(.secondary)
-            Circle().fill(item?.tint.color ?? .secondary).frame(width: 7, height: 7)
+            Text(Format.time(intake.date)).monospacedDigit().foregroundStyle(Grafite.muted)
+            Circle().fill(item?.tint.color ?? Grafite.muted).frame(width: 7, height: 7)
             // Contador: o registro é o evento em si ("Comer doce").
             Text(item.map { $0.schedule == .counter ? $0.name.capitalizedFirst : $0.name } ?? "Item apagado")
             if let dose = item?.dose, !dose.isEmpty {
-                Text(dose).foregroundStyle(.secondary)
+                Text(dose).foregroundStyle(Grafite.muted)
             }
             Spacer(minLength: 4)
             if let site = intake.site {
-                Text(site.label).font(.caption).foregroundStyle(.secondary)
+                Text(site.label).font(.caption).foregroundStyle(Grafite.muted)
             }
             Button { store.delete(intake) } label: {
                 Image(systemName: "trash")
@@ -85,7 +86,7 @@ private struct HistoryRow: View {
         .font(.callout)
         .padding(.horizontal, 14)
         .padding(.vertical, 3)
-        .background(hovering ? Color.primary.opacity(0.05) : .clear)
+        .background(hovering ? Grafite.selected : .clear)
         .onHover { hovering = $0 }
     }
 }

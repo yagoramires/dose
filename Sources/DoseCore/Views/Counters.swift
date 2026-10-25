@@ -1,3 +1,4 @@
+import NeyKit
 import SwiftUI
 
 struct CounterSection: View {
@@ -14,6 +15,7 @@ struct CounterSection: View {
             Button { nav.screen = .newCounter } label: {
                 Label("Novo contador", systemImage: "plus")
                     .font(.callout)
+                    .foregroundStyle(Grafite.accent)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
             }
@@ -47,12 +49,13 @@ struct CounterRow: View {
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                 RecordBar(days: days, record: record, tint: item.tint.color)
-                Text(note(days: days, record: record, since: since)).font(.caption).foregroundStyle(.secondary)
+                Text(note(days: days, record: record, since: since)).font(.caption).foregroundStyle(Grafite.muted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: 2) {
                 Button { store.take(item) } label: {
-                    Image(systemName: "arrow.counterclockwise").frame(width: 20, height: 20).contentShape(Rectangle())
+                    Image(systemName: "arrow.counterclockwise").foregroundStyle(Grafite.ghostText)
+                        .frame(width: 20, height: 20).contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
                 .help("Aconteceu agora: zerar (dá pra desfazer no ⋯)")
@@ -62,7 +65,7 @@ struct CounterRow: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 7)
-        .background(hovering ? Color.primary.opacity(0.05) : .clear)
+        .background(hovering ? Grafite.selected : .clear)
         .onHover { hovering = $0 }
     }
 
@@ -107,7 +110,7 @@ struct NewCounterView: View {
         let days = Format.days(from: last, to: Date())
         VStack(alignment: .leading, spacing: 0) {
             Header(title: "Novo contador", back: { nav.screen = .today })
-            Divider()
+            Line()
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text("\(days)")
@@ -121,15 +124,15 @@ struct NewCounterView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(RoundedRectangle(cornerRadius: 10).fill(chosen.color.opacity(0.12)))
+                .background(RoundedRectangle(cornerRadius: Grafite.cardRadius).fill(chosen.color.opacity(0.12)))
 
                 Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 10) {
                     GridRow {
-                        Text("Última vez").foregroundStyle(.secondary)
+                        Text("Última vez").foregroundStyle(Grafite.muted)
                         DatePicker("", selection: $last, in: ...Date(), displayedComponents: .date).labelsHidden()
                     }
                     GridRow {
-                        Text("Cor").foregroundStyle(.secondary)
+                        Text("Cor").foregroundStyle(Grafite.muted)
                         HStack(spacing: 6) {
                             ForEach(Tint.allCases, id: \.self) { option in
                                 Button { tint = option } label: {
@@ -146,8 +149,8 @@ struct NewCounterView: View {
 
                 HStack {
                     Spacer()
-                    Button("Cancelar") { nav.screen = .today }
-                    Button("Criar contador") {
+                    FormButton(title: "Cancelar") { nav.screen = .today }
+                    FormButton(title: "Criar contador", style: .primary) {
                         var item = Item(name: name.trimmingCharacters(in: .whitespaces), dose: "", schedule: .counter,
                                         tint: chosen)
                         item.created = last

@@ -1,3 +1,4 @@
+import NeyKit
 import SwiftUI
 
 /// Registrar uma dose: horário (padrão agora) e, nos injetáveis, o local no mapa do corpo.
@@ -16,7 +17,7 @@ struct LogView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Header(title: item.title, subtitle: subtitle, back: { nav.screen = .today })
-            Divider()
+            Line()
             VStack(alignment: .leading, spacing: 14) {
                 DatePicker("Quando", selection: $date, in: ...Date().addingTimeInterval(60 * 60))
                     .datePickerStyle(.compact)
@@ -24,18 +25,18 @@ struct LogView: View {
                 if item.tracksSite {
                     VStack(alignment: .leading, spacing: 8) {
                         LastSite(item: item)
-                        Text("Local desta aplicação").font(.subheadline.weight(.medium))
+                        GSectionLabel("Local desta aplicação")
                         BodyMap(item: item, selection: $site)
                         Text("Esquerdo e direito do seu corpo. A sugestão é o local usado há mais tempo.")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.caption).foregroundStyle(Grafite.muted)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
                 HStack {
                     Spacer()
-                    Button("Cancelar") { nav.screen = .today }
-                    Button(item.schedule == .counter ? "Zerar contador" : "Registrar") {
+                    FormButton(title: "Cancelar") { nav.screen = .today }
+                    FormButton(title: item.schedule == .counter ? "Zerar contador" : "Registrar", style: .primary) {
                         store.take(item, at: date, site: site)
                         nav.screen = .today
                     }
@@ -61,18 +62,18 @@ struct LastSite: View {
             HStack(spacing: 10) {
                 Image(systemName: "mappin.and.ellipse").font(.title3).foregroundStyle(item.tint.color)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Última aplicação").font(.caption).foregroundStyle(.secondary)
-                    Text(site.label).fontWeight(.semibold)
+                    Text("Última aplicação").font(.caption).foregroundStyle(Grafite.muted)
+                    Text(site.label).fontWeight(.semibold).foregroundStyle(Grafite.strong)
                     Text("\(Format.ago(last.date, now: store.now).capitalizedFirst), \(Format.day(last.date, now: store.now)) às \(Format.time(last.date))")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(Grafite.muted)
                 }
                 Spacer(minLength: 0)
             }
             .padding(10)
-            .background(RoundedRectangle(cornerRadius: 10).fill(item.tint.color.opacity(0.12)))
+            .background(RoundedRectangle(cornerRadius: Grafite.cardRadius).fill(item.tint.color.opacity(0.12)))
         } else {
             Text("Nenhuma aplicação registrada ainda. Se já aplicou antes, mude a data em Quando e marque o local.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.caption).foregroundStyle(Grafite.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -90,8 +91,8 @@ struct BodyMap: View {
         Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
             GridRow {
                 Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
-                Text("Esquerdo").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
-                Text("Direito").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
+                Text("Esquerdo").font(.caption).foregroundStyle(Grafite.muted).frame(maxWidth: .infinity)
+                Text("Direito").font(.caption).foregroundStyle(Grafite.muted).frame(maxWidth: .infinity)
             }
             ForEach(Site.rows, id: \.region) { row in
                 GridRow {
@@ -110,17 +111,17 @@ struct BodyMap: View {
                 Text(Format.ago(used, now: store.now)).font(.callout)
                 if suggested {
                     Text("sugerido").font(.caption2.weight(.semibold))
-                        .foregroundStyle(selected ? Color.white.opacity(0.85) : Color.accentColor)
+                        .foregroundStyle(selected ? Grafite.onAccent.opacity(0.75) : Grafite.accent)
                 } else if last {
                     Text("última").font(.caption2.weight(.semibold))
-                        .foregroundStyle(selected ? Color.white.opacity(0.85) : Color.orange)
+                        .foregroundStyle(selected ? Grafite.onAccent.opacity(0.75) : Grafite.warn)
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 42)
-            .foregroundStyle(selected ? Color.white : Color.primary)
-            .background(RoundedRectangle(cornerRadius: 8).fill(selected ? Color.accentColor : Color.primary.opacity(0.06)))
+            .foregroundStyle(selected ? Grafite.onAccent : Grafite.text)
+            .background(RoundedRectangle(cornerRadius: 8).fill(selected ? Grafite.accent : Grafite.card))
             .overlay(RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(suggested && !selected ? Color.accentColor : .clear, lineWidth: 1.5))
+                .strokeBorder(suggested && !selected ? Grafite.accent : Grafite.cardBorder, lineWidth: suggested && !selected ? 1.5 : 1))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

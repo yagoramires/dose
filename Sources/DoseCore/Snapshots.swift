@@ -1,4 +1,5 @@
 import AppKit
+import NeyKit
 import SwiftUI
 
 /// `Dose --snapshots <pasta>`: desenha cada tela com dados de exemplo em PNG e sai.
@@ -6,6 +7,7 @@ import SwiftUI
 /// temporário, nunca o de verdade.
 enum Snapshots {
     static func run(into folder: URL) {
+        Log.enabled = false
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("dose-snapshots-\(UUID()).json")
         defer { try? FileManager.default.removeItem(at: file) }
         let store = Store(url: file)
@@ -56,25 +58,37 @@ enum Snapshots {
         let emptyFile = FileManager.default.temporaryDirectory.appendingPathComponent("dose-snapshots-vazio-\(UUID()).json")
         defer { try? FileManager.default.removeItem(at: emptyFile) }
         let empty = Store(url: emptyFile)
-        for appearance in [NSAppearance.Name.aqua, .darkAqua] {
-            render(RootView().environmentObject(empty).environmentObject(Nav()).environmentObject(Reminders(store: empty)),
-                   appearance: appearance, to: folder.appendingPathComponent("0-vazio\(appearance == .aqua ? "" : "-escuro").png"))
+        let alone = Shell(state: PopoverState(version: "0.2.0", hosted: false, updateReady: true))
+        render(RootView().environmentObject(empty).environmentObject(Nav()).environmentObject(Reminders(store: empty))
+            .environmentObject(alone), to: folder.appendingPathComponent("0-vazio.png"))
+        for (name, screen) in screens {
+            nav.screen = screen
+            render(RootView().environmentObject(store).environmentObject(nav).environmentObject(Reminders(store: store))
+                .environmentObject(alone), to: folder.appendingPathComponent("\(name).png"))
         }
-        for appearance in [NSAppearance.Name.aqua, .darkAqua] {
-            for (name, screen) in screens {
-                nav.screen = screen
-                let suffix = appearance == .aqua ? "" : "-escuro"
-                render(RootView().environmentObject(store).environmentObject(nav).environmentObject(Reminders(store: store)),
-                       appearance: appearance, to: folder.appendingPathComponent("\(name)\(suffix).png"))
-            }
-        }
+        // Dentro do NeyHub: sem login, Sair, Configurações… nem linha de atualização.
+        nav.screen = .items
+        render(RootView().environmentObject(store).environmentObject(nav).environmentObject(Reminders(store: store))
+            .environmentObject(Shell(state: PopoverState(version: "0.2.0", hosted: true))), to: folder.appendingPathComponent("4-itens-neyhub.png"))
+        // Notificações negadas, pelo centro falso do selftest: nada chega ao sistema.
+        let off = Reminders(store: store, hosted: true, center: FakeNotifier(status: .denied))
+        off.refreshPermission()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+        nav.screen = .today
+        render(RootView().environmentObject(store).environmentObject(nav).environmentObject(off).environmentObject(alone),
+               to: folder.appendingPathComponent("1-hoje-sem-notificacoes.png"))
+        render(SettingsView(version: "0.2.0", presence: Presence(screen: false, menuBar: true), onPresence: { _ in })
+            .environmentObject(Reminders(store: store)), to: folder.appendingPathComponent("settings.png"))
+        render(SettingsView(version: "0.2.0", presence: nil, onPresence: { _ in }).environmentObject(off),
+               to: folder.appendingPathComponent("settings-neyhub.png"))
+        render(ScreenView().frame(width: 820, height: 560), to: folder.appendingPathComponent("screen.png"))
         print("✓ \(folder.path)")
     }
 
     /// Desenha a tela numa janela fora da vista e grava o PNG.
-    private static func render(_ root: some View, appearance: NSAppearance.Name, to file: URL) {
-        let view = NSHostingView(rootView: root.background(Color(nsColor: .windowBackgroundColor)))
-        view.appearance = NSAppearance(named: appearance)
+    private static func render(_ root: some View, to file: URL) {
+        let view = NSHostingView(rootView: root)
+        view.appearance = NSAppearance(named: .darkAqua)
         let window = NSWindow(contentRect: NSRect(origin: .zero, size: view.fittingSize),
                               styleMask: .borderless, backing: .buffered, defer: false)
         window.contentView = view

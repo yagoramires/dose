@@ -2,6 +2,18 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.2.0] - 2026-10-25
+
+### Adicionado
+- Instalação pelo NeyHub (`Dose-0.2.0.neyplugin`): o Dose roda dentro dele, com os mesmos dados, e os lembretes chegam como NeyHub.
+- Instalador `.dmg` e atualização automática no avulso: baixa sozinho e troca o app quando você fecha o Dose, com a janela **Novidades** na abertura seguinte.
+- Configurações (em **Itens e ajustes → Configurações…**): onde o Dose aparece (janela com ícone no Dock, barra de menus ou os dois, sem reiniciar) e o estado das notificações.
+
+### Alterado
+- Visual no tema Grafite (escuro, acento verde-limão), com a mesma navegação de antes.
+- Se o NeyHub já roda o Dose, o avulso avisa, sai dos itens de login e fecha.
+- O build exige o certificado "Aero Local Signing" (sem assinatura ad-hoc).
+
 ## [0.1.0] - 2026-10-22
 
 ### Adicionado

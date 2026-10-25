@@ -22,7 +22,7 @@ enum Snapshots {
         for day in 1...9 { store.take(vitaminaC, at: ago(day, 8, 10)) }
         store.take(vitaminaC, at: ago(0, 8, 12))
         store.take(multi, at: ago(1, 9, 3))
-        let sites: [Site] = [.abdomenLeft, .abdomenRight, .thighLeft]
+        let sites: [Site] = [.armLeft, .armRight, .abdomenLeft]
         for (week, site) in sites.enumerated() { store.take(semanal, at: ago(5 + 7 * (sites.count - 1 - week), 9), site: site) }
         store.take(cha, at: ago(0, 7, 40))
         store.take(cha, at: ago(0, 13, 15))

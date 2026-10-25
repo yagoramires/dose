@@ -2,6 +2,25 @@
 
 Controle de remédios e suplementos pela barra de menus do macOS. Um clique na pílula mostra o que falta hoje, o que já foi tomado (e a que horas) e o que é "quando precisar".
 
+![Dose](docs/print.png)
+
+O print usa itens de exemplo.
+
+## Instalar
+
+Hoje a instalação é por build local (veja **Build local**): rode `scripts/setup-signing.sh` uma vez e depois `scripts/build.sh --run`.
+
+Instalador `.dmg` e instalação pelo NeyHub chegam na próxima versão.
+
+## Permissões
+
+- **Notificações**: para os lembretes (alerta e som). O macOS pede na primeira vez.
+- Não pede Acessibilidade, Gravação de Tela, Câmera nem Microfone, e não usa a rede.
+
+## Como usar
+
+Clique na pílula na barra de menus.
+
 - Começa vazio: você adiciona e configura cada item (nome, dose, frequência, horários, cor).
 - **Vários horários por dia** (08:00 e 20:00 = 2 doses): a cápsula enche a cada dose e o lembrete vem na hora de cada uma.
 - **Todo dia** (vitamina C, vitamina D): marca com um clique, mostra a hora em que tomou e quantos dias seguidos.
@@ -17,12 +36,24 @@ Controle de remédios e suplementos pela barra de menus do macOS. Um clique na p
 
 Os dados ficam em `~/Library/Application Support/Dose/dados.json` e o log em `~/Library/Logs/Dose/dose.log`.
 
-## Compilar
+## Atalhos
+
+O Dose não tem atalho global. Nos formulários, Return confirma e Esc cancela.
+
+## Modos de exibição
+
+A pílula na barra mostra quantos itens ainda faltam hoje. A interface segue o claro ou escuro do macOS. Cada item tem uma cor de cápsula, escolhida na edição.
+
+## Atualizações
+
+O Dose ainda não se atualiza sozinho: para atualizar, baixe o código novo e rode o build de novo (veja **Build local**).
+
+## Build local
 
 Precisa só das Command Line Tools (sem Xcode).
 
 ```sh
-scripts/setup-signing.sh   # uma vez: certificado local (o mesmo do Aero e do Capture)
+scripts/setup-signing.sh   # uma vez: certificado local de assinatura
 scripts/build.sh --run     # compila, assina e abre build/Dose.app
 ```
 
@@ -30,6 +61,10 @@ scripts/build.sh --run     # compila, assina e abre build/Dose.app
 
 > O SDK atual transformou `@State` num macro cujo plugin só vem com o Xcode; as telas usam `@ViewState` (em `Views/Root.swift`), que faz a mesma coisa.
 
+## Patch notes
+
+Veja o [CHANGELOG](CHANGELOG.md).
+
 ## Licença
 
-MIT
+[MIT](LICENSE)

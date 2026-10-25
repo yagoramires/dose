@@ -9,7 +9,7 @@ O print usa itens de exemplo.
 ## Instalar
 
 1. Baixe o `Dose-x.y.z.dmg` (ou o `.zip`) na [página de releases](https://github.com/yagoramires/dose/releases/latest) e arraste o **Dose.app** pra pasta **Aplicativos**.
-2. Abra o Dose. Como ele não é assinado com um certificado pago da Apple, na primeira vez o macOS avisa que não conseguiu verificar o desenvolvedor. Clique com o botão direito no app → **Abrir**, ou vá em **Ajustes do Sistema → Privacidade e Segurança**, role até o fim e clique em **Abrir Mesmo Assim**. Pelo Terminal também resolve: `xattr -dr com.apple.quarantine /Applications/Dose.app`
+2. Abra o Dose. Como ele não é assinado com um certificado pago da Apple, na primeira vez o macOS avisa que não conseguiu verificar o desenvolvedor. Vá em **Ajustes do Sistema → Privacidade e Segurança**, role até o fim e clique em **Abrir Mesmo Assim**. No macOS 14 também dá para clicar com o botão direito no app → **Abrir** (a partir do macOS 15 esse atalho não libera mais o app). Pelo Terminal também resolve: `xattr -dr com.apple.quarantine /Applications/Dose.app`
 3. Permita as notificações quando o macOS pedir (veja **Permissões**). Na primeira abertura o Dose entra sozinho nos itens de início, porque os lembretes só chegam com ele aberto.
 
 Requer macOS 14 ou mais novo. Roda nativo em Apple Silicon e Intel. Também dá pra compilar do código (veja **Build local**).

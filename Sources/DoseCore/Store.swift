@@ -42,12 +42,23 @@ final class Store: ObservableObject {
             readOnly = "Dados de uma versão mais nova do Dose — atualize"
             debugLog("dados.json schema \(schema) (este lê até \(Self.schema)): só leitura")
         } else if snapshot == nil {
-            // Não abriu: guarda uma cópia e não grava um vazio por cima, pra não perder o histórico.
-            let copy = url.deletingPathExtension().appendingPathExtension("ilegivel-\(Int(Date().timeIntervalSince1970)).json")
-            try? FileManager.default.copyItem(at: url, to: copy)
+            // Não abriu: guarda uma cópia (uma só por conteúdo) e não grava um vazio por cima, pra não perder o histórico.
+            let copy = Self.unreadableCopy(of: url, data: data)
             readOnly = "Não deu pra ler os dados do Dose — nada é salvo (cópia em \(copy.lastPathComponent))"
             debugLog("dados.json ilegível, cópia em \(copy.lastPathComponent): só leitura")
         }
+    }
+
+    /// Cópia `<nome>.ilegivel-<ts>.json`; se já há uma com os mesmos bytes, devolve essa em vez de criar outra a cada abertura.
+    private static func unreadableCopy(of url: URL, data: Data?) -> URL {
+        let fm = FileManager.default, dir = url.deletingLastPathComponent()
+        let prefix = url.deletingPathExtension().lastPathComponent + ".ilegivel-"
+        let existing = ((try? fm.contentsOfDirectory(atPath: dir.path)) ?? []).sorted()
+            .filter { $0.hasPrefix(prefix) && $0.hasSuffix(".json") }.map { dir.appendingPathComponent($0) }
+        if let data, let same = existing.first(where: { fm.contents(atPath: $0.path) == data }) { return same }
+        let copy = url.deletingPathExtension().appendingPathExtension("ilegivel-\(Int(Date().timeIntervalSince1970)).json")
+        try? fm.copyItem(at: url, to: copy)
+        return copy
     }
 
     private func save() {
@@ -66,19 +77,23 @@ final class Store: ObservableObject {
     func item(_ id: UUID) -> Item? { items.first { $0.id == id } }
 
     // MARK: Registro
+    // Só leitura recusa já aqui, não só no save(): um "Tomei" só em memória pararia os lembretes e sumiria ao reabrir.
 
     func take(_ item: Item, at date: Date = Date(), site: Site? = nil) {
+        guard readOnly == nil else { return debugLog("só leitura: ignorou a mudança") }
         intakes.append(Intake(itemID: item.id, date: date, site: site))
         intakes.sort { $0.date < $1.date }
         debugLog("tomou \(item.name) em \(date)\(site.map { " · \($0.rawValue)" } ?? "")")
     }
 
     func delete(_ intake: Intake) {
+        guard readOnly == nil else { return debugLog("só leitura: ignorou a mudança") }
         intakes.removeAll { $0.id == intake.id }
         debugLog("apagou dose de \(item(intake.itemID)?.name ?? "?") em \(intake.date)")
     }
 
     func upsert(_ item: Item) {
+        guard readOnly == nil else { return debugLog("só leitura: ignorou a mudança") }
         if let index = items.firstIndex(where: { $0.id == item.id }) {
             items[index] = item
         } else {
@@ -87,6 +102,7 @@ final class Store: ObservableObject {
     }
 
     func archive(_ item: Item) {
+        guard readOnly == nil else { return debugLog("só leitura: ignorou a mudança") }
         guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
         items[index].archived = true
     }

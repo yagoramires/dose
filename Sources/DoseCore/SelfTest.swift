@@ -65,20 +65,37 @@ extension DoseApp {
         func text(_ url: URL) -> String { try! String(contentsOf: url, encoding: .utf8) }
 
         let newer = folder.appendingPathComponent("novo.json")
-        let future = #"{"schema":2,"items":[],"intakes":[],"campoNovo":true}"#
+        let id = UUID()
+        let future = """
+        {"schema":2,"campoNovo":true,"items":[{"id":"\(id)","name":"Vitamina C","dose":"5 g","schedule":{"daily":{}},"times":[],"created":"2026-10-01T12:00:00Z"}],
+        "intakes":[{"id":"\(UUID())","itemID":"\(id)","date":"2026-10-20T11:00:00Z"}]}
+        """
         try! Data(future.utf8).write(to: newer)
         let s2 = Store(url: newer)
         precondition(s2.readOnly == "Dados de uma versão mais nova do Dose — atualize", "\(String(describing: s2.readOnly))")
+        let (items, intakes) = (s2.items, s2.intakes)
+        precondition(items.count == 1 && intakes.count == 1)
+        // Só leitura não aceita mudança nem em memória: um "Tomei" que não fica salvo esconderia uma dose depois de reabrir.
         s2.upsert(Item(name: "X", dose: "", schedule: .daily))
+        s2.take(items[0])
+        s2.delete(intakes[0])
+        s2.archive(items[0])
+        precondition(s2.items == items && s2.intakes == intakes, "só leitura mudou em memória")
         precondition(text(newer) == future, "schema 2 foi regravado")
 
         let broken = folder.appendingPathComponent("quebrado.json")
         try! Data("{ nada".utf8).write(to: broken)
+        // Cópia ilegível com os mesmos bytes já existe: não cria outra a cada abertura.
+        try! Data("{ nada".utf8).write(to: folder.appendingPathComponent("quebrado.ilegivel-1.json"))
         let s3 = Store(url: broken)
         precondition(s3.readOnly?.hasPrefix("Não deu pra ler os dados do Dose") == true && s3.items.isEmpty)
         s3.upsert(Item(name: "X", dose: "", schedule: .daily))
+        precondition(s3.items.isEmpty, "ilegível aceitou item em memória")
         precondition(text(broken) == "{ nada", "ilegível foi regravado")
-        precondition(try! fm.contentsOfDirectory(atPath: folder.path).contains { $0.hasPrefix("quebrado.ilegivel-") }, "sem cópia ilegível")
+        precondition(try! fm.contentsOfDirectory(atPath: folder.path).filter { $0.hasPrefix("quebrado.ilegivel-") } == ["quebrado.ilegivel-1.json"], "cópia ilegível repetida")
+        // Ícone da barra: só leitura não fica mudo.
+        precondition(DoseApp.statusLook(due: [], readOnly: "x") == (symbol: "exclamationmark.triangle.fill", title: "", tip: "x"))
+        precondition(DoseApp.statusLook(due: [], readOnly: nil).symbol == "pills")
 
         // Sem `schema` é a 0.1.0 (= 1): abre normal e passa a gravar com schema 1.
         let old = folder.appendingPathComponent("velho.json")

@@ -208,11 +208,18 @@ public final class DoseApp: NSObject, NSPopoverDelegate {
     /// Pílula na barra; com número quando falta alguma coisa hoje.
     private func refreshStatusItem() {
         guard let button = statusItem?.button else { return }
-        let due = store.due
-        button.image = NSImage(systemSymbolName: due.isEmpty ? "pills" : "pills.fill", accessibilityDescription: "Dose")
+        let look = Self.statusLook(due: store.due, readOnly: store.readOnly)
+        button.image = NSImage(systemSymbolName: look.symbol, accessibilityDescription: "Dose")
         button.imagePosition = .imageLeading
-        button.title = due.isEmpty ? "" : " \(due.count)"
-        button.toolTip = due.isEmpty ? "Dose: tudo em dia" : "Falta: " + due.map(\.name).joined(separator: ", ")
+        button.title = look.title
+        button.toolTip = look.tip
+    }
+
+    /// Só leitura troca a pílula por um alerta: arquivo quebrado não pode ficar mudo na barra.
+    static func statusLook(due: [Item], readOnly: String?) -> (symbol: String, title: String, tip: String) {
+        if let readOnly { return ("exclamationmark.triangle.fill", "", readOnly) }
+        if due.isEmpty { return ("pills", "", "Dose: tudo em dia") }
+        return ("pills.fill", " \(due.count)", "Falta: " + due.map(\.name).joined(separator: ", "))
     }
 
     @objc private func toggle() {

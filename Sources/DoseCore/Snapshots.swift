@@ -87,10 +87,10 @@ enum Snapshots {
         // Tela de app no tamanho da área do NeyHub com a janela no padrão; a estreita confere o empilhar das colunas.
         let screenNav = Nav()
         for (name, screen, width) in [("screen", Screen.today, 790.0), ("screen-historico", .history, 790), ("screen-itens", .edit(semanal), 790),
-                                      ("screen-estreita", .today, 520)] {
+                                      ("screen-estreita", .today, 520), ("screen-neyhub", .today, 898)] {
             screenNav.screen = screen
             render(ScreenView().environmentObject(store).environmentObject(screenNav).environmentObject(Reminders(store: store))
-                .environmentObject(alone).frame(width: width, height: 560), to: folder.appendingPathComponent("\(name).png"))
+                .environmentObject(alone).frame(width: width, height: width == 898 ? 580 : 560), to: folder.appendingPathComponent("\(name).png"))
         }
         print("✓ \(folder.path)")
     }

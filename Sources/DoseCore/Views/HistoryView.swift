@@ -20,7 +20,7 @@ struct HistoryView: View {
                     .frame(maxWidth: .infinity)
                     .padding(24)
             } else {
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         if !streaks.isEmpty {
                             SectionTitle(text: "Sequências")

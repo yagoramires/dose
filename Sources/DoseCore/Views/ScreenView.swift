@@ -25,7 +25,7 @@ struct ScreenView: View {
             VStack(alignment: .leading, spacing: 14) {
                 ReadOnlyBanner()
                 header(wide: wide)
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     Group {
                         switch tab {
                         case .history: history

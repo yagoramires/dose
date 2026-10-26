@@ -12,6 +12,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 - Configurações (em **Itens e ajustes → Configurações…**): onde o Dose aparece (janela com ícone no Dock, barra de menus ou os dois, sem reiniciar) e o estado das notificações.
 
 ### Alterado
+- Ícone novo no padrão do NeyHub: o mesmo desenho, em fundo grafite com detalhe verde-limão.
 - Visual no tema Grafite (escuro, acento verde-limão), com a mesma navegação de antes.
 - Se o NeyHub já roda o Dose, o avulso avisa, sai dos itens de login e fecha.
 - O build exige o certificado "Aero Local Signing" (sem assinatura ad-hoc).

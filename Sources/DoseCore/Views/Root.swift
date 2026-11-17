@@ -132,7 +132,7 @@ struct SectionTitle: View {
     let text: String
 
     var body: some View {
-        GSectionLabel(text)
+        SectionText(text: text)
             .padding(.horizontal, 14)
             .padding(.top, 10)
             .padding(.bottom, 2)

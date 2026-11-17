@@ -100,21 +100,24 @@ struct Item: Codable, Identifiable, Hashable {
 }
 
 enum Site: String, Codable, CaseIterable, Identifiable {
-    // A ordem é a do rodízio sugerido quando há empate (nenhum usado ainda).
-    case abdomenLeft, abdomenRight, thighLeft, thighRight, armLeft, armRight
+    case abdomenLeft, abdomenRight, gluteLeft, gluteRight
+    // Fora do mapa e do rodízio; ficam só pra registros antigos continuarem abrindo.
+    case thighLeft, thighRight, armLeft, armRight
+
+    /// Os locais oferecidos. A ordem é a do rodízio sugerido quando há empate (nenhum usado ainda).
+    static var allCases: [Site] { [.abdomenLeft, .abdomenRight, .gluteLeft, .gluteRight] }
 
     var id: String { rawValue }
 
     /// Linhas do mapa do corpo: região, lado esquerdo, lado direito.
     static let rows: [(region: String, left: Site, right: Site)] = [
-        ("Braço", .armLeft, .armRight),
         ("Abdômen", .abdomenLeft, .abdomenRight),
-        ("Coxa", .thighLeft, .thighRight),
+        ("Glúteo", .gluteLeft, .gluteRight),
     ]
 
-    /// "coxa esq.", pras linhas apertadas da tela principal.
+    /// "glúteo esq.", pras linhas apertadas da tela principal.
     var short: String {
-        let side = [.abdomenLeft, .thighLeft, .armLeft].contains(self) ? "esq." : "dir."
+        let side = [.abdomenLeft, .gluteLeft, .thighLeft, .armLeft].contains(self) ? "esq." : "dir."
         return "\(label.split(separator: " ")[0].lowercased()) \(side)"
     }
 
@@ -122,6 +125,8 @@ enum Site: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .abdomenLeft: "Abdômen esquerdo"
         case .abdomenRight: "Abdômen direito"
+        case .gluteLeft: "Glúteo esquerdo"
+        case .gluteRight: "Glúteo direito"
         case .thighLeft: "Coxa esquerda"
         case .thighRight: "Coxa direita"
         case .armLeft: "Braço esquerdo"

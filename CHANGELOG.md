@@ -2,6 +2,14 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.3.0] - 2026-11-17
+
+### Mudado
+- Hoje (popover e tela): o que já passou da hora sobe pra um bloco **Agora**, com cartões acesos na cor do item e botão **Tomei**/**Aplicar** direto; o resto do dia vem embaixo. Anel com o progresso do dia no cabeçalho e uma régua de 0 a 24 h com os horários (cheio = tomado, vermelho = passou) e a hora atual.
+- Registrar com outro horário: no lugar do campo de data do macOS, atalhos (**Agora**, **No horário**, **Há 1 h**), os últimos 7 dias (ponto = já tem registro), o horário grande com ±15 min (clique para digitar) e um calendário para datas mais antigas. O botão diz o que vai gravar ("Registrar ontem às 21:30").
+- Locais de aplicação: só abdômen e glúteo (esquerdo e direito). Registros antigos em coxa ou braço continuam no histórico.
+- Títulos de seção em caixa normal.
+
 ## [0.2.0] - 2026-10-25
 
 ### Adicionado

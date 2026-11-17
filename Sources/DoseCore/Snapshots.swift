@@ -27,7 +27,7 @@ enum Snapshots {
         // Semana com de tudo na grade da tela: completo, parcial (C tem duas doses) e esquecido.
         for day in [2, 3, 5, 6, 7, 8, 10, 11, 12, 13] { store.take(multi, at: ago(day, 9, 5)) }
         for day in [1, 3, 4, 6, 7, 9] { store.take(vitaminaC, at: ago(day, 20, 5)) }
-        let sites: [Site] = [.armLeft, .armRight, .abdomenLeft]
+        let sites: [Site] = [.abdomenLeft, .abdomenRight, .gluteLeft]
         for (week, site) in sites.enumerated() { store.take(semanal, at: ago(5 + 7 * (sites.count - 1 - week), 9), site: site) }
         store.take(cha, at: ago(0, 7, 40))
         store.take(cha, at: ago(0, 13, 15))

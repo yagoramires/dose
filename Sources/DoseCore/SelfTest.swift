@@ -248,16 +248,26 @@ extension DoseApp {
         weekly.created = day(30, 0)
         store.upsert(weekly)
         precondition(store.mark(of: weekly, on: day(3)) == .missed && store.mark(of: weekly, on: day(2)) == .none)
+        precondition(store.isDueNow(weekly), "atrasado vai pro Agora")
+        var night = Item(name: "Noite", dose: "", schedule: .daily, times: [Clock(hour: 23, minute: 59)])
+        night.created = day(5, 0)
+        store.upsert(night)
+        precondition(store.isDueNow(night) == (store.now >= Clock(hour: 23, minute: 59).on(today)), "horário que não chegou fica no resto do dia")
         store.take(weekly, at: day(4))
         precondition(store.mark(of: weekly, on: day(3)) == .none && store.mark(of: weekly, on: day(4)) == .done, "véspera vale")
         var every = Item(name: "A cada 3", dose: "", schedule: .interval(days: 3))
         every.created = day(30, 0)
         store.upsert(every)
         precondition(store.mark(of: every, on: day(2)) == .none)
+        precondition(store.isDueNow(every), "sem horário vale o dia todo")
         let now = Date()
         precondition(Format.until(now.addingTimeInterval(20 * 60 - 1), now: now) == "em 20 min")
         precondition(Format.until(now.addingTimeInterval(160 * 60), now: now) == "em 3 h")
         precondition(Format.until(now.addingTimeInterval(10), now: now) == "em 1 min")
+        // Coxa e braço saíram do mapa, mas registro antigo com eles ainda abre; o rodízio só sugere abdômen e glúteo.
+        let old = try! JSONDecoder().decode(Intake.self, from: Data(#"{"id":"\#(UUID())","itemID":"\#(UUID())","date":0,"site":"thighLeft"}"#.utf8))
+        precondition(old.site == .thighLeft && old.site?.short == "coxa esq.")
+        precondition(!Site.allCases.contains(.thighLeft) && store.suggestedSite(for: weekly) == .abdomenLeft)
     }
 
     /// Hospedado: sem "Abrir ao iniciar", sem "Sair" (fecharia o NeyHub), sem Configurações… e sem linha de atualização.

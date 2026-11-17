@@ -51,9 +51,15 @@ struct ScreenView: View {
     // MARK: Cabeçalho
 
     @ViewBuilder private func header(wide: Bool) -> some View {
-        let title = VStack(alignment: .leading, spacing: 2) {
-            Text(Format.long(store.now).capitalizedFirst).font(.system(size: 18, weight: .bold)).foregroundStyle(Grafite.strong)
-            if let summary { Text(summary).font(.system(size: 12)).foregroundStyle(Grafite.muted) }
+        let day = store.dayProgress
+        let title = HStack(spacing: 12) {
+            if day.total > 0 { ProgressRing(done: day.total - day.missing, total: day.total, size: 38) }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(Format.long(store.now).capitalizedFirst).font(.system(size: 18, weight: .bold)).foregroundStyle(Grafite.strong)
+                if let summary = store.summary {
+                    Text(summary).font(.system(size: 12)).foregroundStyle(day.late > 0 ? Color.red : Grafite.muted)
+                }
+            }
         }
         let controls = HStack(spacing: 12) {
             tabs
@@ -64,21 +70,6 @@ struct ScreenView: View {
         } else {
             VStack(alignment: .leading, spacing: 10) { title; controls }
         }
-    }
-
-    /// "Falta 3 de 5 · 2 atrasados", com a mesma conta do popover.
-    private var summary: String? {
-        let scheduled = store.active.filter { $0.schedule.isScheduled }
-        let today = scheduled.filter { if case .later = store.status(of: $0) { false } else { true } }.count
-        guard today > 0 else { return nil }
-        var missing = 0, late = 0
-        for item in scheduled {
-            guard case .pending(let since) = store.status(of: item) else { continue }
-            missing += 1
-            if Format.days(from: since, to: store.now) > 0 { late += 1 }
-        }
-        if missing == 0 { return "Tudo tomado hoje" }
-        return "Falta \(missing) de \(today)" + (late > 0 ? " · \(late) \(late == 1 ? "atrasado" : "atrasados")" : "")
     }
 
     private var tabs: some View {
@@ -105,25 +96,36 @@ struct ScreenView: View {
     @ViewBuilder private func today(wide: Bool, width: CGFloat) -> some View {
         if store.active.isEmpty {
             ScreenCard { Welcome() }
-        } else if wide {
-            // 1,35 : 1, como no mockup.
-            let left = (width - 14) * 1.35 / 2.35
-            HStack(alignment: .top, spacing: 14) {
-                agendaColumn.frame(width: left)
-                sideColumn.frame(width: width - 14 - left)
-            }
         } else {
-            VStack(spacing: 12) { agendaColumn; sideColumn }
+            let now = store.active.filter(store.isDueNow).sorted { order($0) < order($1) }
+            VStack(spacing: 14) {
+                if DayRuler.hasDots(store) { DayRuler() }
+                if !now.isEmpty {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: 10)], spacing: 10) {
+                        ForEach(now) { DueCard(item: $0, tall: true) }
+                    }
+                }
+                if wide {
+                    // 1,35 : 1, como no mockup.
+                    let left = (width - 14) * 1.35 / 2.35
+                    HStack(alignment: .top, spacing: 14) {
+                        agendaColumn.frame(width: left)
+                        sideColumn.frame(width: width - 14 - left)
+                    }
+                } else {
+                    VStack(spacing: 12) { agendaColumn; sideColumn }
+                }
+            }
         }
     }
 
     private var agendaColumn: some View {
-        let agenda = store.active.filter { $0.schedule.isScheduled }.sorted { order($0) < order($1) }
+        let agenda = store.active.filter { $0.schedule.isScheduled && !store.isDueNow($0) }.sorted { order($0) < order($1) }
         let asNeeded = store.active.filter { $0.schedule == .asNeeded }
         return VStack(spacing: 12) {
             if !reminders.authorized { ScreenCard { NotificationsOff() } }
             if !agenda.isEmpty {
-                ScreenCard("Agenda de hoje", note: "por horário") {
+                ScreenCard("Resto do dia", note: "por horário") {
                     ForEach(agenda) { ItemRow(item: $0, wide: true) }
                 }
             }
@@ -248,7 +250,7 @@ struct ScreenCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             if let title {
                 HStack {
-                    GSectionLabel(title)
+                    SectionText(text: title)
                     Spacer()
                     if let note { Text(note).font(.system(size: 10)).foregroundStyle(Grafite.muted) }
                     if let link {

@@ -8,39 +8,64 @@ struct TodayView: View {
 
     var body: some View {
         let scheduled = store.active.filter { $0.schedule.isScheduled }
-        // Primeiro o que falta, depois o que já foi, por último os semanais fora do dia.
-        let ordered = scheduled.sorted { rank($0) < rank($1) }
+        // Agora: atrasados primeiro. Depois o que ainda vem, o que já foi e, por último, os fora do dia.
+        let now = scheduled.filter(store.isDueNow).sorted { rank($0) < rank($1) }
+        let rest = scheduled.filter { !store.isDueNow($0) }.sorted { rank($0) < rank($1) }
         let asNeeded = store.active.filter { $0.schedule == .asNeeded }
-        let missing = scheduled.filter { store.status(of: $0).isPending }.count
-        let today = scheduled.filter { if case .later = store.status(of: $0) { false } else { true } }.count
+        let day = store.dayProgress
 
         VStack(alignment: .leading, spacing: 0) {
-            Header(title: Format.long(store.now).capitalizedFirst, subtitle: progress(missing: missing, of: today)) {
+            HStack(spacing: 10) {
+                if day.total > 0 { ProgressRing(done: day.total - day.missing, total: day.total) }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(Format.long(store.now).capitalizedFirst).font(.system(size: 13, weight: .bold)).foregroundStyle(Grafite.strong)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                    if let summary = store.summary {
+                        Text(summary).font(.system(size: 11)).foregroundStyle(day.late > 0 ? Color.red : Grafite.muted)
+                    }
+                }
+                Spacer(minLength: 0)
                 IconButton(symbol: "plus", help: "Novo item") { nav.screen = .edit(nil) }
                 IconButton(symbol: "clock.arrow.circlepath", help: "Histórico") { nav.screen = .history }
                 IconButton(symbol: "gearshape", help: "Itens e ajustes") { nav.screen = .items }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            if DayRuler.hasDots(store) {
+                DayRuler().padding(.horizontal, 14).padding(.bottom, 8)
             }
             Line()
 
             if store.active.isEmpty {
                 Welcome()
             }
-            if !ordered.isEmpty {
+            if !now.isEmpty {
+                SectionTitle(text: "Agora")
+                VStack(spacing: 8) {
+                    ForEach(now) { DueCard(item: $0) }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+            }
+            if !rest.isEmpty {
+                if !now.isEmpty { SectionTitle(text: "Resto do dia") }
                 VStack(spacing: 0) {
-                    ForEach(ordered) { ItemRow(item: $0) }
+                    ForEach(rest) { ItemRow(item: $0) }
                 }
                 .padding(.vertical, 6)
             }
             if !asNeeded.isEmpty {
-                if !ordered.isEmpty { Line() }
+                if !scheduled.isEmpty { Line() }
                 SectionTitle(text: "Quando precisar")
-                VStack(spacing: 0) {
-                    ForEach(asNeeded) { ItemRow(item: $0) }
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                    ForEach(asNeeded) { NeedChip(item: $0) }
                 }
-                .padding(.bottom, 6)
+                .padding(.horizontal, 14)
+                .padding(.top, 4)
+                .padding(.bottom, 10)
             }
             if !store.active.isEmpty {
-                if !ordered.isEmpty || !asNeeded.isEmpty { Line() }
+                if !scheduled.isEmpty || !asNeeded.isEmpty { Line() }
                 CounterSection()
             }
             if !reminders.authorized {
@@ -58,10 +83,6 @@ struct TodayView: View {
         }
     }
 
-    private func progress(missing: Int, of total: Int) -> String? {
-        guard total > 0 else { return nil }
-        return missing == 0 ? "Tudo tomado hoje" : "Falta \(missing) de \(total)"
-    }
 }
 
 /// "Notificações desligadas" com o Ligar (Ajustes no avulso, Permissões no NeyHub).

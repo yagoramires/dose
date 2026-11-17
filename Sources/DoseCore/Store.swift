@@ -202,6 +202,36 @@ final class Store: ObservableObject {
     /// Itens que ainda faltam: o número que aparece na barra de menus.
     var due: [Item] { active.filter { status(of: $0).isPending } }
 
+    /// Bloco "Agora": falta e já passou da hora (atrasado, horário vencido ou sem horário no dia).
+    func isDueNow(_ item: Item) -> Bool {
+        guard case .pending(let since) = status(of: item) else { return false }
+        if Format.days(from: since, to: now) > 0 { return true }
+        guard let next = nextTime(of: item, since: since) else { return true }
+        return now >= next.on(since)
+    }
+
+    /// Itens com horário que contam hoje (fora do dia não): quantos faltam, de quantos e quantos atrasados.
+    var dayProgress: (missing: Int, total: Int, late: Int) {
+        var result = (missing: 0, total: 0, late: 0)
+        for item in active where item.schedule.isScheduled {
+            let status = status(of: item)
+            if case .later = status { continue }
+            result.total += 1
+            guard case .pending(let since) = status else { continue }
+            result.missing += 1
+            if Format.days(from: since, to: now) > 0 { result.late += 1 }
+        }
+        return result
+    }
+
+    /// "Falta 3 de 5, 2 atrasados"; nil sem nada pra hoje.
+    var summary: String? {
+        let day = dayProgress
+        guard day.total > 0 else { return nil }
+        if day.missing == 0 { return "Tudo tomado hoje" }
+        return "Falta \(day.missing) de \(day.total)" + (day.late > 0 ? ", \(day.late) \(day.late == 1 ? "atrasado" : "atrasados")" : "")
+    }
+
     /// Grade dos últimos dias na tela de app: como ficou `item` no dia de `day`.
     func mark(of item: Item, on day: Date) -> DayMark {
         let calendar = Calendar.current

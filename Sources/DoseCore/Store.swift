@@ -73,6 +73,10 @@ final class Store: ObservableObject {
     }
 
     var active: [Item] { items.filter { !$0.archived } }
+    /// Itens com dia certo pra tomar.
+    var scheduled: [Item] { active.filter { $0.schedule.isScheduled } }
+    var asNeeded: [Item] { active.filter { $0.schedule == .asNeeded } }
+    var counters: [Item] { active.filter { $0.schedule == .counter } }
 
     func item(_ id: UUID) -> Item? { items.first { $0.id == id } }
 
@@ -148,8 +152,7 @@ final class Store: ObservableObject {
             let ahead = days.map { ($0 - todayWeekday + 6) % 7 + 1 }.min()!
             let cycle = calendar.date(byAdding: .day, value: -back, to: today)!
             let next = calendar.date(byAdding: .day, value: ahead, to: today)!
-            // Uma vez por semana: tomar um dia antes também vale (ex.: viagem no dia da aplicação).
-            let early = days.count == 1 ? calendar.date(byAdding: .day, value: -1, to: cycle)! : cycle
+            let early = item.schedule.allowsEveDose ? calendar.date(byAdding: .day, value: -1, to: cycle)! : cycle
             if let last, taken(item, since: early) >= doses {
                 return last.date >= today ? .done(last) : .later(next: next, last: last)
             }
@@ -187,7 +190,7 @@ final class Store: ObservableObject {
 
     /// Quantas doses desde o começo de um dia (pra itens com mais de uma dose por dia).
     func taken(_ item: Item, since day: Date) -> Int {
-        intakes.reduce(0) { $0 + ($1.itemID == item.id && $1.date >= day ? 1 : 0) }
+        intakes(of: item, since: day).count
     }
 
     /// 0 a 1: quanto das doses do dia já foi tomado (preenche a cápsula).
@@ -258,7 +261,7 @@ final class Store: ObservableObject {
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: day)
         let end = calendar.date(byAdding: .day, value: 1, to: start)!
-        let count = intakes.reduce(0) { $0 + ($1.itemID == item.id && $1.date >= start && $1.date < end ? 1 : 0) }
+        let count = intakes(of: item, since: start).filter { $0.date < end }.count
         if count >= item.dosesPerDay { return .done }
         if count > 0 { return .partial }
         // Hoje ainda dá tempo; antes de o item existir não havia o que tomar.
@@ -268,9 +271,8 @@ final class Store: ObservableObject {
             return .missed
         case .weekdays(let days):
             guard days.contains(calendar.component(.weekday, from: start)) else { return .none }
-            // Uma vez por semana: tomar na véspera também vale (como em status(of:)).
             let eve = calendar.date(byAdding: .day, value: -1, to: start)!
-            if days.count == 1, intakes.contains(where: { $0.itemID == item.id && $0.date >= eve && $0.date < start }) { return .none }
+            if item.schedule.allowsEveDose, intakes.contains(where: { $0.itemID == item.id && $0.date >= eve && $0.date < start }) { return .none }
             return .missed
         // shortcut: "a cada N dias" não marca esquecido (o vencimento depende da dose anterior); calcular se fizer falta.
         case .interval, .asNeeded, .counter:

@@ -31,7 +31,7 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
     /// Insistências só entre 7 h e 23 h.
     static let quiet = 7..<23
     /// Identificadores de aviso e de categoria: no NeyHub o centro é de todos os plugins e ele roteia por esse prefixo.
-    static let prefix = "local.dose."
+    static let prefix = DoseApp.id + "."
     static let categories: Set<UNNotificationCategory> = {
         let take = UNNotificationAction(identifier: "take", title: "Tomei")
         let pick = UNNotificationAction(identifier: "pick", title: "Escolher local…", options: .foreground)
@@ -105,7 +105,7 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
     /// Abre Ajustes → Notificações já no Dose.
     func openSettings() {
         if let openPermissions { return openPermissions() }
-        let id = Bundle.main.bundleIdentifier ?? "local.dose"
+        let id = Bundle.main.bundleIdentifier ?? DoseApp.id
         if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)") {
             NSWorkspace.shared.open(url)
         }

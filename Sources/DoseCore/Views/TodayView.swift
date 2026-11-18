@@ -7,11 +7,11 @@ struct TodayView: View {
     @EnvironmentObject private var reminders: Reminders
 
     var body: some View {
-        let scheduled = store.active.filter { $0.schedule.isScheduled }
+        let scheduled = store.scheduled
         // Agora: atrasados primeiro. Depois o que ainda vem, o que já foi e, por último, os fora do dia.
         let now = scheduled.filter(store.isDueNow).sorted { rank($0) < rank($1) }
         let rest = scheduled.filter { !store.isDueNow($0) }.sorted { rank($0) < rank($1) }
-        let asNeeded = store.active.filter { $0.schedule == .asNeeded }
+        let asNeeded = store.asNeeded
         let day = store.dayProgress
 
         VStack(alignment: .leading, spacing: 0) {

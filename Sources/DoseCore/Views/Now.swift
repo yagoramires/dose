@@ -113,7 +113,7 @@ struct DayRuler: View {
 
     private var dots: [Dot] {
         let today = Calendar.current.startOfDay(for: store.now)
-        return store.active.filter { $0.schedule.isScheduled }.flatMap { item -> [Dot] in
+        return store.scheduled.flatMap { item -> [Dot] in
             if case .later = store.status(of: item) { return [] }
             let taken = store.taken(item, since: today)
             return item.times.sorted().enumerated().map { index, clock in

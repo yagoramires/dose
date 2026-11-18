@@ -8,7 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var updater: Updater?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        if HubCheck.isHosted(id: "local.dose") && HubCheck.leaveForHub(id: "local.dose", name: "Dose") { return }
+        if HubCheck.isHosted(id: DoseApp.id) && HubCheck.leaveForHub(id: DoseApp.id, name: "Dose") { return }
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
         let dose = DoseApp(defaults: .standard, hosted: false, version: version)
         dose.start()
@@ -16,14 +16,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dose.applyPresence(dose.presence)
         self.dose = dose
 
-        let updater = Updater(name: "Dose", repo: "yagoramires/dose", id: "local.dose")
+        let updater = Updater(name: "Dose", repo: "yagoramires/dose", id: DoseApp.id)
         dose.updateReady = updater.staged != nil
         updater.onChange = { [weak dose, weak updater] in dose?.updateReady = updater?.staged != nil }
         dose.onRelaunch = { [weak updater] in updater?.relaunchNow() }
         updater.start()
         self.updater = updater
         // Toda abertura: mostra as novidades uma vez e limpa um preparado velho.
-        if let notes = Updater.notesAfterUpdate(id: "local.dose", current: version) {
+        if let notes = Updater.notesAfterUpdate(id: DoseApp.id, current: version) {
             WhatsNew.show(name: "Dose", version: version, notes: notes)
         }
     }

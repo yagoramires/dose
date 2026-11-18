@@ -7,6 +7,8 @@ import UserNotifications
 
 /// O Dose inteiro, sem a casca: o avulso (`Dose`) e o plugin do NeyHub (`DosePlugin`) usam o mesmo.
 public final class DoseApp: NSObject, NSPopoverDelegate {
+    /// Bundle id: domínio de defaults no NeyHub, autosave do ícone, id do plugin e do atualizador.
+    public static let id = "local.dose"
     private let defaults: UserDefaults
     /// Dentro do NeyHub: sem item de login, sem "Sair" e sem pedir notificações.
     private let hosted: Bool
@@ -109,7 +111,7 @@ public final class DoseApp: NSObject, NSPopoverDelegate {
             self.statusItem = nil
         } else if visible, statusItem == nil {
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-            item.autosaveName = "local.dose"
+            item.autosaveName = Self.id
             item.button?.target = self
             item.button?.action = #selector(toggle)
             statusItem = item

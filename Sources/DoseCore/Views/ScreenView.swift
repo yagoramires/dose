@@ -120,8 +120,8 @@ struct ScreenView: View {
     }
 
     private var agendaColumn: some View {
-        let agenda = store.active.filter { $0.schedule.isScheduled && !store.isDueNow($0) }.sorted { order($0) < order($1) }
-        let asNeeded = store.active.filter { $0.schedule == .asNeeded }
+        let agenda = store.scheduled.filter { !store.isDueNow($0) }.sorted { order($0) < order($1) }
+        let asNeeded = store.asNeeded
         return VStack(spacing: 12) {
             if !reminders.authorized { ScreenCard { NotificationsOff() } }
             if !agenda.isEmpty {
@@ -150,7 +150,7 @@ struct ScreenView: View {
     }
 
     private var sideColumn: some View {
-        let scheduled = store.active.contains { $0.schedule.isScheduled }
+        let scheduled = !store.scheduled.isEmpty
         return VStack(spacing: 12) {
             ScreenCard { CounterSection() }
             if scheduled {
@@ -167,7 +167,7 @@ struct ScreenView: View {
     private var history: some View {
         let sites = store.active.filter(\.tracksSite)
         return VStack(spacing: 12) {
-            if store.active.contains(where: { $0.schedule.isScheduled }) || !sites.isEmpty {
+            if !store.scheduled.isEmpty || !sites.isEmpty {
                 ScreenCard("Últimos 14 dias", note: "sequência atual") {
                     DayGrid(days: 14, streaks: true)
                     ForEach(sites) { item in
@@ -323,7 +323,7 @@ struct DayGrid: View {
                         .font(.system(size: 9)).foregroundStyle(Grafite.label).frame(maxWidth: .infinity)
                 }
             }
-            ForEach(store.active.filter { $0.schedule.isScheduled }) { item in
+            ForEach(store.scheduled) { item in
                 HStack(spacing: 3) {
                     HStack(spacing: 4) {
                         Text(item.name).lineLimit(1)

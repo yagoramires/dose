@@ -6,7 +6,7 @@ struct CounterSection: View {
     @EnvironmentObject private var nav: Nav
 
     var body: some View {
-        let counters = store.active.filter { $0.schedule == .counter }
+        let counters = store.counters
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle(text: "Contadores")
             VStack(spacing: 0) {

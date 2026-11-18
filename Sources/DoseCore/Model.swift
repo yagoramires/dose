@@ -11,6 +11,12 @@ enum Schedule: Hashable {
     /// "12 dias sem comer doce": conta os dias desde a última vez que aconteceu.
     case counter
 
+    /// Uma vez por semana: tomar na véspera do dia marcado também vale (ex.: viagem no dia da aplicação).
+    var allowsEveDose: Bool {
+        if case .weekdays(let days) = self { return days.count == 1 }
+        return false
+    }
+
     /// Entra na lista do dia (tem dia certo pra tomar).
     var isScheduled: Bool {
         switch self {

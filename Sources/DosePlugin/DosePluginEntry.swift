@@ -5,7 +5,7 @@ import UserNotifications
 
 /// Dose dentro do NeyHub. Linka só DoseCore e NeyKit (nunca NeyKitApp).
 final class DoseEntry: NSObject, NeyPlugin {
-    private lazy var app = DoseApp(defaults: AppDefaults.forApp("local.dose"), hosted: true, version: PluginLocation.version(dso: #dsohandle))
+    private lazy var app = DoseApp(defaults: AppDefaults.forApp(DoseApp.id), hosted: true, version: PluginLocation.version(dso: #dsohandle))
 
     var contractVersion: Int { neyPluginContractVersion }
 
@@ -13,7 +13,7 @@ final class DoseEntry: NSObject, NeyPlugin {
         app.onOpenPermissions = { host.openPermissions() }
         // Opcional no contrato v1: NeyHub antigo sem showScreen fica no popover.
         if host.responds(to: #selector(NeyHost.showScreen(id:))) {
-            app.onShowScreen = { host.showScreen?(id: "local.dose") }
+            app.onShowScreen = { host.showScreen?(id: DoseApp.id) }
         }
         app.start()
     }

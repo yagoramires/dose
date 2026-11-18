@@ -145,7 +145,7 @@ struct ScreenView: View {
     private func order(_ item: Item) -> (Int, Int) {
         let status = store.status(of: item)
         if case .later = status { return (2, 0) }
-        if case .pending(let since) = status, Format.days(from: since, to: store.now) > 0 { return (0, 0) }
+        if case .pending(let since) = status, store.lateDays(since: since) > 0 { return (0, 0) }
         return (1, store.clock(of: item).map { $0.hour * 60 + $0.minute } ?? 24 * 60)
     }
 
@@ -278,7 +278,7 @@ struct NeedChip: View {
     let item: Item
 
     var body: some View {
-        let today = store.intakes(of: item).filter { $0.date >= Calendar.current.startOfDay(for: store.now) }
+        let today = store.intakesToday(of: item)
         HStack(alignment: .top, spacing: 4) {
             Button { nav.take(item, store: store) } label: {
                 VStack(alignment: .leading, spacing: 2) {
@@ -371,7 +371,7 @@ struct Rotation: View {
     let item: Item
 
     var body: some View {
-        let last = store.intakes(of: item).last { $0.site != nil }
+        let last = store.lastSiteIntake(of: item)
         let lastText = last.flatMap { intake in intake.site.map { "Última aplicação: \(Format.ago(intake.date, now: store.now)), \($0.label.lowercased())" } }
         VStack(alignment: .leading, spacing: 1) {
             Text(item.name).fontWeight(.semibold).foregroundStyle(Grafite.strong)

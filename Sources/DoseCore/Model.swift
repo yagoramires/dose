@@ -109,17 +109,22 @@ enum Site: String, Codable, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    /// Linhas do mapa do corpo: região, lado esquerdo, lado direito.
-    static let rows: [(region: String, left: Site, right: Site)] = [
-        ("Abdômen", .abdomenLeft, .abdomenRight),
-        ("Glúteo", .gluteLeft, .gluteRight),
-    ]
+    /// Linhas do mapa do corpo: lado esquerdo e direito de cada região.
+    static let rows: [(left: Site, right: Site)] = [(.abdomenLeft, .abdomenRight), (.gluteLeft, .gluteRight)]
+
+    var region: String {
+        switch self {
+        case .abdomenLeft, .abdomenRight: "Abdômen"
+        case .gluteLeft, .gluteRight: "Glúteo"
+        case .thighLeft, .thighRight: "Coxa"
+        case .armLeft, .armRight: "Braço"
+        }
+    }
+
+    var isLeft: Bool { [.abdomenLeft, .gluteLeft, .thighLeft, .armLeft].contains(self) }
 
     /// "glúteo esq.", pras linhas apertadas da tela principal.
-    var short: String {
-        let side = [.abdomenLeft, .gluteLeft, .thighLeft, .armLeft].contains(self) ? "esq." : "dir."
-        return "\(label.split(separator: " ")[0].lowercased()) \(side)"
-    }
+    var short: String { "\(region.lowercased()) \(isLeft ? "esq." : "dir.")" }
 
     var label: String {
         switch self {

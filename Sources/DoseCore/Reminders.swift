@@ -111,13 +111,12 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
         }
     }
 
-    /// Chamado a cada 30 s e ao acordar o Mac.
     func check() {
         guard authorized, !stopped else { return }
         let now = Date()
         let hour = Calendar.current.component(.hour, from: now)
         for item in store.active {
-            guard item.remind, let next = item.times.first, case .pending(let since) = store.status(of: item) else {
+            guard item.remind, case .pending(let since) = store.status(of: item), let nextTime = store.nextTime(of: item, since: since) else {
                 if nextNag[item.id] != nil { clear(item) }
                 continue
             }
@@ -126,16 +125,15 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
                 if seenTaken[item.id] != nil { clear(item) }
                 seenTaken[item.id] = taken
             }
-            let due = (store.nextTime(of: item, since: since) ?? next).on(since)
+            let due = nextTime.on(since)
             guard now >= due, now >= nextNag[item.id] ?? .distantPast else { continue }
             // Na madrugada só sai o aviso do próprio horário marcado, não as insistências.
             if !Self.quiet.contains(hour), now.timeIntervalSince(due) > 60 * 60 { continue }
-            post(item, overdue: Format.days(from: since, to: now), dose: taken + 1)
+            post(item, overdue: store.lateDays(since: since), dose: taken + 1)
             nextNag[item.id] = now.addingTimeInterval(Self.nag)
         }
     }
 
-    /// Dose marcada: tira a notificação que ficou na Central.
     func clear(_ item: Item) {
         nextNag[item.id] = nil
         // O sem prefixo é aviso da 0.1.0 que ficou na Central.
@@ -146,7 +144,7 @@ final class Reminders: NSObject, ObservableObject, UNUserNotificationCenterDeleg
         let content = UNMutableNotificationContent()
         content.title = item.dose.isEmpty ? item.name : "\(item.name) · \(item.dose)"
         if overdue > 0 {
-            content.body = "Atrasado \(overdue) \(overdue == 1 ? "dia" : "dias"). Já tomou?"
+            content.body = "Atrasado \(Format.dayCount(overdue)). Já tomou?"
         } else if item.tracksSite {
             content.body = "Hora da aplicação. Sugestão: \(store.suggestedSite(for: item).label.lowercased())."
         } else if item.dosesPerDay > 1 {

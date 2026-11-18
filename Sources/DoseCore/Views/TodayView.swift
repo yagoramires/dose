@@ -85,7 +85,7 @@ struct TodayView: View {
 
 }
 
-/// "Notificações desligadas" com o Ligar (Ajustes no avulso, Permissões no NeyHub).
+/// O Ligar abre Ajustes no avulso e Permissões no NeyHub.
 struct NotificationsOff: View {
     @EnvironmentObject private var reminders: Reminders
 
@@ -183,9 +183,8 @@ struct ItemRow: View {
                 .buttonStyle(.plain)
                 .help("Registrar agora")
         case .pending(let since):
-            let late = Format.days(from: since, to: store.now) > 0
-            Button { take() } label: { PillMark(tint: late ? .red : item.tint.color, style: .todo,
-                                                      progress: store.progress(of: item).map { Double($0.taken) / Double($0.total) } ?? 0) }
+            let late = store.lateDays(since: since) > 0
+            Button { take() } label: { PillMark(tint: late ? .red : item.tint.color, style: .todo, progress: store.doseFraction(of: item)) }
                 .buttonStyle(.plain)
                 .help(item.tracksSite ? "Registrar e escolher o local" : "Marcar como tomado")
         case .later:
@@ -210,8 +209,7 @@ struct ItemRow: View {
         case .done(let intake):
             if let site = intake.site { return site.label }
             if item.dosesPerDay > 1 {
-                let today = store.intakes(of: item).filter { $0.date >= Calendar.current.startOfDay(for: store.now) }
-                return "Doses às " + Format.list(today.map { Format.time($0.date) })
+                return "Doses às " + Format.list(store.intakesToday(of: item).map { Format.time($0.date) })
             }
             let streak = store.streak(of: item)
             return item.schedule == .daily && streak > 1 ? "\(streak) dias seguidos" : nil
@@ -229,9 +227,9 @@ struct ItemRow: View {
     @ViewBuilder private func trailing(_ status: Status) -> some View {
         switch status {
         case .pending(let since):
-            let late = Format.days(from: since, to: store.now)
+            let late = store.lateDays(since: since)
             if late > 0 {
-                Text("\(late) \(late == 1 ? "dia" : "dias") de atraso").font(.callout.weight(.medium)).foregroundStyle(.red)
+                Text("\(Format.dayCount(late)) de atraso").font(.callout.weight(.medium)).foregroundStyle(.red)
             } else if let next = store.nextTime(of: item, since: since) {
                 let due = next.on(since)
                 Text(wide ? (store.now >= due ? "desde \(next.label)" : Format.until(due, now: store.now)) : next.label)
@@ -266,7 +264,6 @@ struct PillMark: View {
             switch style {
             case .todo:
                 if progress > 0 {
-                    // Enche da esquerda pra direita conforme as doses do dia.
                     Capsule().fill(tint).mask(alignment: .leading) {
                         Rectangle().frame(width: 30 * progress)
                     }

@@ -33,7 +33,7 @@ struct DueCard: View {
     var body: some View {
         let late = lateDays
         let tint = late > 0 ? Color.red : item.tint.color
-        let mark = PillMark(tint: tint, style: .todo, progress: store.progress(of: item).map { Double($0.taken) / Double($0.total) } ?? 0)
+        let mark = PillMark(tint: tint, style: .todo, progress: store.doseFraction(of: item))
         Group {
             if tall {
                 VStack(alignment: .leading, spacing: 10) {
@@ -51,7 +51,7 @@ struct DueCard: View {
 
     private var lateDays: Int {
         guard case .pending(let since) = store.status(of: item) else { return 0 }
-        return Format.days(from: since, to: store.now)
+        return store.lateDays(since: since)
     }
 
     private func name(late: Int) -> some View {
@@ -73,7 +73,7 @@ struct DueCard: View {
     private func detail(late: Int) -> String {
         var parts: [String] = []
         if late > 0 {
-            parts.append("\(late) \(late == 1 ? "dia" : "dias") de atraso")
+            parts.append("\(Format.dayCount(late)) de atraso")
         } else if case .pending(let since) = store.status(of: item), let next = store.nextTime(of: item, since: since) {
             parts.append("Desde \(next.label)")
         } else {

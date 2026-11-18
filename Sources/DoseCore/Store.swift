@@ -77,23 +77,28 @@ final class Store: ObservableObject {
     func item(_ id: UUID) -> Item? { items.first { $0.id == id } }
 
     // MARK: Registro
-    // Só leitura recusa já aqui, não só no save(): um "Tomei" só em memória pararia os lembretes e sumiria ao reabrir.
+
+    /// Só leitura recusa já aqui, não só no save(): um "Tomei" só em memória pararia os lembretes e sumiria ao reabrir.
+    private func canWrite() -> Bool {
+        if readOnly != nil { debugLog("só leitura: ignorou a mudança") }
+        return readOnly == nil
+    }
 
     func take(_ item: Item, at date: Date = Date(), site: Site? = nil) {
-        guard readOnly == nil else { return debugLog("só leitura: ignorou a mudança") }
+        guard canWrite() else { return }
         intakes.append(Intake(itemID: item.id, date: date, site: site))
         intakes.sort { $0.date < $1.date }
         debugLog("tomou \(item.name) em \(date)\(site.map { " · \($0.rawValue)" } ?? "")")
     }
 
     func delete(_ intake: Intake) {
-        guard readOnly == nil else { return debugLog("só leitura: ignorou a mudança") }
+        guard canWrite() else { return }
         intakes.removeAll { $0.id == intake.id }
         debugLog("apagou dose de \(item(intake.itemID)?.name ?? "?") em \(intake.date)")
     }
 
     func upsert(_ item: Item) {
-        guard readOnly == nil else { return debugLog("só leitura: ignorou a mudança") }
+        guard canWrite() else { return }
         if let index = items.firstIndex(where: { $0.id == item.id }) {
             items[index] = item
         } else {
@@ -102,7 +107,7 @@ final class Store: ObservableObject {
     }
 
     func archive(_ item: Item) {
-        guard readOnly == nil else { return debugLog("só leitura: ignorou a mudança") }
+        guard canWrite() else { return }
         guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
         items[index].archived = true
     }
@@ -110,6 +115,17 @@ final class Store: ObservableObject {
     // MARK: Consultas
 
     func intakes(of item: Item) -> [Intake] { intakes.filter { $0.itemID == item.id } }
+
+    /// Doses do item de `day` em diante (hoje: `Calendar.current.startOfDay(for: now)`).
+    func intakes(of item: Item, since day: Date) -> [Intake] { intakes(of: item).filter { $0.date >= day } }
+
+    func intakesToday(of item: Item) -> [Intake] { intakes(of: item, since: Calendar.current.startOfDay(for: now)) }
+
+    /// Última dose com local registrado.
+    func lastSiteIntake(of item: Item) -> Intake? { intakes(of: item).last { $0.site != nil } }
+
+    /// Dias de atraso de uma dose pendente desde `since` (0 = é de hoje).
+    func lateDays(since: Date) -> Int { Format.days(from: since, to: now) }
 
     func last(_ item: Item) -> Intake? { intakes.last { $0.itemID == item.id } }
 
@@ -151,7 +167,7 @@ final class Store: ObservableObject {
             return due <= today ? .pending(since: due) : .later(next: due, last: last)
 
         case .asNeeded:
-            return .asNeeded(today: intakes(of: item).filter { $0.date >= today })
+            return .asNeeded(today: intakes(of: item, since: today))
 
         case .counter:
             return .counter(since: last?.date ?? item.created)
@@ -174,6 +190,11 @@ final class Store: ObservableObject {
         intakes.reduce(0) { $0 + ($1.itemID == item.id && $1.date >= day ? 1 : 0) }
     }
 
+    /// 0 a 1: quanto das doses do dia já foi tomado (preenche a cápsula).
+    func doseFraction(of item: Item) -> Double {
+        progress(of: item).map { Double($0.taken) / Double($0.total) } ?? 0
+    }
+
     /// Doses tomadas e total do dia em andamento; nil quando é dose única.
     func progress(of item: Item) -> (taken: Int, total: Int)? {
         guard item.dosesPerDay > 1 else { return nil }
@@ -193,7 +214,7 @@ final class Store: ObservableObject {
     /// Horário da coluna da tela de app: o da próxima dose; feito, o último do dia; atrasado ou fora do dia, nenhum.
     func clock(of item: Item) -> Clock? {
         switch status(of: item) {
-        case .pending(let since): Format.days(from: since, to: now) > 0 ? nil : nextTime(of: item, since: since)
+        case .pending(let since): lateDays(since: since) > 0 ? nil : nextTime(of: item, since: since)
         case .done: item.times.last
         default: nil
         }
@@ -205,7 +226,7 @@ final class Store: ObservableObject {
     /// Bloco "Agora": falta e já passou da hora (atrasado, horário vencido ou sem horário no dia).
     func isDueNow(_ item: Item) -> Bool {
         guard case .pending(let since) = status(of: item) else { return false }
-        if Format.days(from: since, to: now) > 0 { return true }
+        if lateDays(since: since) > 0 { return true }
         guard let next = nextTime(of: item, since: since) else { return true }
         return now >= next.on(since)
     }
@@ -219,7 +240,7 @@ final class Store: ObservableObject {
             result.total += 1
             guard case .pending(let since) = status else { continue }
             result.missing += 1
-            if Format.days(from: since, to: now) > 0 { result.late += 1 }
+            if lateDays(since: since) > 0 { result.late += 1 }
         }
         return result
     }
@@ -257,7 +278,6 @@ final class Store: ObservableObject {
         }
     }
 
-    /// Último uso de cada local por este item.
     func lastUse(of item: Item) -> [Site: Date] {
         var result: [Site: Date] = [:]
         for intake in intakes(of: item) {
@@ -270,6 +290,11 @@ final class Store: ObservableObject {
     func suggestedSite(for item: Item) -> Site {
         let used = lastUse(of: item)
         return Site.allCases.min { (used[$0] ?? .distantPast) < (used[$1] ?? .distantPast) } ?? .abdomenLeft
+    }
+
+    /// Cor de item novo: a primeira que nenhum item ativo usa.
+    func freeTint(fallback: Tint) -> Tint {
+        Tint.allCases.first { tint in !active.contains { $0.tint == tint } } ?? fallback
     }
 
     /// Dias seguidos com dose, contando até hoje (ou até ontem, se hoje ainda falta).

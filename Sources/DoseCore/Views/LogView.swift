@@ -111,7 +111,6 @@ struct WhenPicker: View {
 
     private func set(_ new: Date) { date = min(new, limit) }
 
-    /// Troca o dia mantendo o horário.
     private var dayBinding: Binding<Date> {
         Binding(get: { date }, set: { day in
             let parts = calendar.dateComponents([.hour, .minute], from: date)
@@ -200,7 +199,7 @@ struct LastSite: View {
     let item: Item
 
     var body: some View {
-        if let last = store.intakes(of: item).last(where: { $0.site != nil }), let site = last.site {
+        if let last = store.lastSiteIntake(of: item), let site = last.site {
             HStack(spacing: 10) {
                 Image(systemName: "mappin.and.ellipse").font(.title3).foregroundStyle(item.tint.color)
                 VStack(alignment: .leading, spacing: 1) {
@@ -229,16 +228,16 @@ struct BodyMap: View {
     var body: some View {
         let used = store.lastUse(of: item)
         let suggested = store.suggestedSite(for: item)
-        let lastSite = store.intakes(of: item).last(where: { $0.site != nil })?.site
+        let lastSite = store.lastSiteIntake(of: item)?.site
         Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
             GridRow {
                 Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
                 Text("Esquerdo").font(.caption).foregroundStyle(Grafite.muted).frame(maxWidth: .infinity)
                 Text("Direito").font(.caption).foregroundStyle(Grafite.muted).frame(maxWidth: .infinity)
             }
-            ForEach(Site.rows, id: \.region) { row in
+            ForEach(Site.rows, id: \.left) { row in
                 GridRow {
-                    Text(row.region).font(.callout)
+                    Text(row.left.region).font(.callout)
                     cell(row.left, used: used[row.left], suggested: suggested == row.left, last: lastSite == row.left)
                     cell(row.right, used: used[row.right], suggested: suggested == row.right, last: lastSite == row.right)
                 }

@@ -78,6 +78,9 @@ enum Format {
         }
     }
 
+    /// "1 dia", "3 dias"
+    static func dayCount(_ count: Int) -> String { "\(count) \(count == 1 ? "dia" : "dias")" }
+
     /// Diferença em dias de calendário (não em períodos de 24 h).
     static func days(from start: Date, to end: Date) -> Int {
         let calendar = Calendar.current

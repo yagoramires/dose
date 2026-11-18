@@ -186,6 +186,26 @@ struct FormButton: View {
     }
 }
 
+/// As oito cores de item em bolinhas; a escolhida ganha um aro.
+struct TintPicker: View {
+    @Binding var selection: Tint
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(Tint.allCases, id: \.self) { tint in
+                Button { selection = tint } label: {
+                    Circle().fill(tint.color).frame(width: 18, height: 18)
+                        .overlay(Circle().strokeBorder(.primary.opacity(selection == tint ? 0.8 : 0), lineWidth: 2)
+                            .padding(-3))
+                }
+                .buttonStyle(.plain)
+                .help(tint.rawValue)
+            }
+        }
+        .padding(.leading, 3)
+    }
+}
+
 /// Texto à esquerda e interruptor do Grafite à direita.
 struct SwitchRow: View {
     let title: String

@@ -185,7 +185,6 @@ struct EditView: View {
                                 }
                             }
                             Button {
-                                // Próximo horário 3 h depois do último (pra 08:00 sugere 11:00).
                                 let last = draft.times.max() ?? Clock(hour: 6, minute: 0)
                                 draft.times.append(Clock(hour: min(23, last.hour + 3), minute: last.minute))
                             } label: {
@@ -209,18 +208,7 @@ struct EditView: View {
                 }
                 GridRow {
                     label("Cor")
-                    HStack(spacing: 6) {
-                        ForEach(Tint.allCases, id: \.self) { tint in
-                            Button { draft.tint = tint } label: {
-                                Circle().fill(tint.color).frame(width: 18, height: 18)
-                                    .overlay(Circle().strokeBorder(.primary.opacity(draft.tint == tint ? 0.8 : 0), lineWidth: 2)
-                                        .padding(-3))
-                            }
-                            .buttonStyle(.plain)
-                            .help(tint.rawValue)
-                        }
-                    }
-                    .padding(.leading, 3)
+                    TintPicker(selection: $draft.tint)
                 }
             }
             .padding(14)
@@ -244,9 +232,8 @@ struct EditView: View {
             .padding([.horizontal, .bottom], 14)
         }
         .onAppear {
-            // Item novo ganha a primeira cor que ninguém usa ainda.
             guard isNew else { return }
-            draft.tint = Tint.allCases.first { tint in !store.active.contains { $0.tint == tint } } ?? .teal
+            draft.tint = store.freeTint(fallback: .teal)
         }
         .confirmationDialog("Excluir \(draft.title)?", isPresented: $confirmDelete) {
             Button("Excluir", role: .destructive) {

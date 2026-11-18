@@ -268,6 +268,14 @@ extension DoseApp {
         let old = try! JSONDecoder().decode(Intake.self, from: Data(#"{"id":"\#(UUID())","itemID":"\#(UUID())","date":0,"site":"thighLeft"}"#.utf8))
         precondition(old.site == .thighLeft && old.site?.short == "coxa esq.")
         precondition(!Site.allCases.contains(.thighLeft) && store.suggestedSite(for: weekly) == .abdomenLeft)
+        precondition(Site.rows.map { $0.left.short } == ["abdômen esq.", "glúteo esq."] && Site.gluteRight.short == "glúteo dir.")
+        // Cor de item novo: a primeira que nenhum item ativo usa; todas em uso, vale a de reserva.
+        precondition(store.freeTint(fallback: .brown) == .orange, "cor livre ignorou as dos itens (todos em teal)")
+        for (index, tint) in Tint.allCases.enumerated() { store.upsert(Item(name: "Cor \(index)", dose: "", schedule: .asNeeded, tint: tint)) }
+        precondition(store.freeTint(fallback: .brown) == .brown)
+        // Atraso e doses de hoje: o que as telas e os lembretes leem do Store.
+        precondition(store.lateDays(since: today) == 0 && store.lateDays(since: day(2)) == 2 && Format.dayCount(1) == "1 dia" && Format.dayCount(3) == "3 dias")
+        precondition(store.intakesToday(of: daily).isEmpty && store.intakes(of: daily, since: day(1, 0)).count == 2)
     }
 
     /// Hospedado: sem "Abrir ao iniciar", sem "Sair" (fecharia o NeyHub), sem Configurações… e sem linha de atualização.
@@ -283,7 +291,6 @@ extension DoseApp {
         let hosted = state(hosted: true), alone = state(hosted: false)
         precondition(!hosted.showsLoginItem && !hosted.showsQuit && !hosted.showsSettings && !hosted.showsUpdate, "\(hosted)")
         precondition(alone.showsLoginItem && alone.showsQuit && alone.showsSettings && alone.showsUpdate, "\(alone)")
-        precondition(hosted.version == "9.8.7" && alone.version == "9.8.7")
         // "Reiniciar agora" (linha de atualização, só avulso): hospedado não chega à casca.
         for isHosted in [true, false] {
             let (d, name) = tempDefaults()

@@ -6,12 +6,25 @@ import SwiftUI
 /// Serve pra conferir o visual sem abrir a janelinha na tela de ninguém; usa um arquivo de dados
 /// temporário, nunca o de verdade.
 enum Snapshots {
+    private static var samples: [Item] {
+        [
+            Item(name: "Vitamina C", dose: "5 g", schedule: .daily, times: [Clock(hour: 9, minute: 0)], tint: .teal),
+            Item(name: "Vitamina D", dose: "1 cápsula", schedule: .daily, times: [Clock(hour: 9, minute: 0)],
+                 tint: .orange),
+            Item(name: "Medicação semanal", dose: "", schedule: .weekdays([7]), times: [Clock(hour: 9, minute: 0)],
+                 tint: .purple, tracksSite: true),
+            Item(name: "Chá", dose: "", schedule: .asNeeded, tint: .brown),
+            Item(name: "Café", dose: "", schedule: .asNeeded, tint: .pink),
+            Item(name: "comer doce", dose: "", schedule: .counter, tint: .blue),
+        ]
+    }
+
     static func run(into folder: URL) {
         Log.enabled = false
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("dose-snapshots-\(UUID()).json")
         defer { try? FileManager.default.removeItem(at: file) }
         let store = Store(url: file)
-        store.items = Item.samples
+        store.items = samples
         store.items[0].times = [Clock(hour: 8, minute: 0), Clock(hour: 20, minute: 0)]
         let calendar = Calendar.current
         let now = Date()

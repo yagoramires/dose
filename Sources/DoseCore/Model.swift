@@ -168,20 +168,6 @@ enum Status {
 }
 
 extension Item {
-    /// Itens de mentira pro modo --snapshots.
-    static var samples: [Item] {
-        [
-            Item(name: "Vitamina C", dose: "5 g", schedule: .daily, times: [Clock(hour: 9, minute: 0)], tint: .teal),
-            Item(name: "Vitamina D", dose: "1 cápsula", schedule: .daily, times: [Clock(hour: 9, minute: 0)],
-                 tint: .orange),
-            Item(name: "Medicação semanal", dose: "", schedule: .weekdays([7]), times: [Clock(hour: 9, minute: 0)],
-                 tint: .purple, tracksSite: true),
-            Item(name: "Chá", dose: "", schedule: .asNeeded, tint: .brown),
-            Item(name: "Café", dose: "", schedule: .asNeeded, tint: .pink),
-            Item(name: "comer doce", dose: "", schedule: .counter, tint: .blue),
-        ]
-    }
-
     var scheduleLabel: String {
         let time = times.isEmpty ? "" : " às " + Format.list(times.map(\.label))
         switch schedule {

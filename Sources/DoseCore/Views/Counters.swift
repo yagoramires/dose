@@ -106,7 +106,7 @@ struct NewCounterView: View {
     @ViewState private var tint: Tint?
 
     var body: some View {
-        let chosen = tint ?? Tint.allCases.first { tint in !store.active.contains { $0.tint == tint } } ?? .blue
+        let chosen = tint ?? store.freeTint(fallback: .blue)
         let days = Format.days(from: last, to: Date())
         VStack(alignment: .leading, spacing: 0) {
             Header(title: "Novo contador", back: { nav.screen = .today })
@@ -133,17 +133,7 @@ struct NewCounterView: View {
                     }
                     GridRow {
                         Text("Cor").foregroundStyle(Grafite.muted)
-                        HStack(spacing: 6) {
-                            ForEach(Tint.allCases, id: \.self) { option in
-                                Button { tint = option } label: {
-                                    Circle().fill(option.color).frame(width: 18, height: 18)
-                                        .overlay(Circle().strokeBorder(.primary.opacity(chosen == option ? 0.8 : 0), lineWidth: 2)
-                                            .padding(-3))
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.leading, 3)
+                        TintPicker(selection: Binding(get: { chosen }, set: { tint = $0 }))
                     }
                 }
 
